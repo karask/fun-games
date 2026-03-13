@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Hub</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <h1>Arcade Hub</h1>
+            </div>
+            <nav class="game-list" id="game-list">
+                <!-- Game items will be injected here by JS -->
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 id="current-game-title">Select a Game</h2>
+                <div class="user-profile">
+                    <div class="avatar"></div>
+                </div>
+            </header>
+            
+            <section class="game-container">
+                <div class="game-wrapper" id="game-wrapper">
+                    <!-- Default state before selecting a game -->
+                    <div class="empty-state" id="empty-state">
+                        <div class="empty-icon">🎮</div>
+                        <p>Choose a game from the sidebar to start playing.</p>
+                    </div>
+                    <!-- Iframe will be injected here -->
+                    <iframe id="game-frame" src="" frameborder="0" style="display: none;"></iframe>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Pong</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+        }
+
+        canvas {
+            background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+            border: 2px solid #00d2d3;
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(0, 210, 211, 0.3);
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 150px;
+            pointer-events: none;
+        }
+
+        .score {
+            font-size: 48px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 15px rgba(0, 210, 211, 0.5);
+            font-family: monospace;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: #555;
+            font-size: 14px;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div id="ui">
+            <div class="score" id="score-p1">0</div>
+            <div class="score" id="score-p2">0</div>
+        </div>
+        <div class="controls-hint">W/S FOR P1 • UP/DOWN FOR P2</div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
