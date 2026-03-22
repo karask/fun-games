@@ -20,6 +20,13 @@ const games = [
         genre: 'Top-Down Shooter',
         thumb: 'assets/survival_thumb.png',
         url: 'games/survival/index.html'
+    },
+    {
+        id: 'tinydungeon',
+        title: 'Tiny Dungeon',
+        genre: 'Roguelike RPG',
+        thumb: 'assets/tinydungeon_thumb.png',
+        url: 'games/tinydungeon/index.html'
     }
 ];
 
