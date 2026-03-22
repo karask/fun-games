@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Breakout</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Orbitron', monospace;
+            color: #f0f0f5;
+        }
+
+        #game-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        #hud {
+            width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(10, 10, 20, 0.95);
+            border: 1px solid rgba(108, 92, 231, 0.4);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .hud-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            min-width: 120px;
+        }
+
+        .hud-label {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: rgba(160, 160, 180, 0.7);
+            text-transform: uppercase;
+        }
+
+        .hud-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00d2d3;
+            text-shadow: 0 0 12px rgba(0, 210, 211, 0.8);
+        }
+
+        #score-val {
+            color: #ffd32a;
+            text-shadow: 0 0 12px rgba(255, 211, 42, 0.8);
+        }
+
+        #level-val {
+            color: #6c5ce7;
+            text-shadow: 0 0 12px rgba(108, 92, 231, 0.8);
+        }
+
+        .lives-display {
+            display: flex;
+            gap: 6px;
+        }
+
+        .life-ball {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 8px #fff, 0 0 16px rgba(0, 210, 211, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .life-ball.lost {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        canvas {
+            display: block;
+            background: #050508;
+            border: 1px solid rgba(108, 92, 231, 0.4);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            box-shadow:
+                0 0 40px rgba(108, 92, 231, 0.2),
+                0 20px 60px rgba(0, 0, 0, 0.6);
+            cursor: none;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 44px;
+            /* below HUD */
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(5, 5, 8, 0.92);
+            border-radius: 0 0 12px 12px;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .game-title {
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #00d2d3, #6c5ce7, #fd79a8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(108, 92, 231, 0.8));
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            letter-spacing: 5px;
+            color: rgba(160, 160, 180, 0.6);
+            margin-bottom: 40px;
+        }
+
+        .btn {
+            padding: 12px 40px;
+            font-family: 'Orbitron', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6c5ce7, #00d2d3);
+            color: #fff;
+            box-shadow: 0 0 20px rgba(108, 92, 231, 0.5);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 0 30px rgba(108, 92, 231, 0.8), 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(240, 240, 245, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 6px 20px;
+            font-size: 11px;
+            color: rgba(160, 160, 180, 0.7);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 16px 24px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 20px;
+            margin-bottom: 24px;
+        }
+
+        .ctrl-key {
+            color: #ffd32a;
+            font-weight: 700;
+        }
+
+        .level-clear-title {
+            font-size: 44px;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffd32a;
+            text-shadow: 0 0 30px rgba(255, 211, 42, 0.8), 0 0 60px rgba(255, 211, 42, 0.4);
+            margin-bottom: 10px;
+            animation: pulse-glow 1s ease-in-out infinite alternate;
+        }
+
+        .level-info {
+            font-size: 13px;
+            color: rgba(160, 160, 180, 0.7);
+            letter-spacing: 3px;
+            margin-bottom: 30px;
+        }
+
+        .gameover-title {
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: #ff4757;
+            text-shadow: 0 0 30px rgba(255, 71, 87, 0.8);
+            margin-bottom: 10px;
+        }
+
+        .final-score {
+            font-size: 16px;
+            color: rgba(160, 160, 180, 0.8);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .final-score span {
+            color: #ffd32a;
+            font-weight: 700;
+        }
+
+        .highscore-tag {
+            font-size: 11px;
+            color: #00d2d3;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            animation: pulse-glow 0.8s ease-in-out infinite alternate;
+        }
+
+        .win-title {
+            font-size: 44px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #ffd32a, #fd79a8, #00d2d3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(255, 211, 42, 0.8));
+        }
+
+        @keyframes pulse-glow {
+            from {
+                opacity: 0.7;
+                filter: drop-shadow(0 0 10px currentColor);
+            }
+
+            to {
+                opacity: 1;
+                filter: drop-shadow(0 0 30px currentColor);
+            }
+        }
+
+        .powerup-toast {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 6px 18px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 30;
+            transition: opacity 0.3s ease;
+        }
+
+        .powerup-toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="hud">
+            <div class="hud-group">
+                <span class="hud-label">Score</span>
+                <span class="hud-value" id="score-val">0</span>
+            </div>
+            <div class="hud-group">
+                <span class="hud-label">Level</span>
+                <span class="hud-value" id="level-val">1</span>
+            </div>
+            <div class="hud-group">
+                <span class="hud-label">High Score</span>
+                <span class="hud-value" id="highscore-val">0</span>
+            </div>
+            <div class="hud-group">
+                <span class="hud-label">Lives</span>
+                <div class="lives-display" id="lives-display">
+                    <div class="life-ball" id="life-0"></div>
+                    <div class="life-ball" id="life-1"></div>
+                    <div class="life-ball" id="life-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="560"></canvas>
+
+        <!-- Start Screen -->
+        <div class="overlay" id="start-screen">
+            <div class="game-title">NEON BREAKOUT</div>
+            <div class="subtitle">ARCADE EDITION · 20 LEVELS</div>
+            <button class="btn btn-primary" onclick="startGame()">START GAME</button>
+            <div class="controls-grid">
+                <span class="ctrl-key">← → / MOUSE</span><span>Move Paddle</span>
+                <span class="ctrl-key">SPACE</span><span>Launch / Fire</span>
+                <span class="ctrl-key">P</span><span>Pause</span>
+            </div>
+        </div>
+
+        <!-- Level Clear Screen -->
+        <div class="overlay hidden" id="level-clear-screen">
+            <div class="level-clear-title">LEVEL CLEAR!</div>
+            <div class="level-info" id="level-clear-info">PREPARE FOR LEVEL 2</div>
+            <div class="final-score">SCORE: <span id="clear-score-val">0</span></div>
+            <button class="btn btn-primary" onclick="nextLevel()">NEXT LEVEL →</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="overlay hidden" id="gameover-screen">
+            <div class="gameover-title">GAME OVER</div>
+            <div class="final-score">SCORE: <span id="go-score-val">0</span></div>
+            <div class="final-score">LEVEL REACHED: <span id="go-level-val">1</span></div>
+            <div class="highscore-tag" id="new-hs-tag" style="display:none;">★ NEW HIGH SCORE ★</div>
+            <button class="btn btn-primary" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
+            <button class="btn btn-secondary" onclick="showStartScreen()">MAIN MENU</button>
+        </div>
+
+        <!-- Victory Screen -->
+        <div class="overlay hidden" id="victory-screen">
+            <div class="win-title">YOU WIN!</div>
+            <div class="level-info">ALL 20 LEVELS CLEARED!</div>
+            <div class="final-score">FINAL SCORE: <span id="win-score-val">0</span></div>
+            <div class="highscore-tag" id="win-hs-tag" style="display:none;">★ NEW HIGH SCORE ★</div>
+            <button class="btn btn-primary" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
+            <button class="btn btn-secondary" onclick="showStartScreen()">MAIN MENU</button>
+        </div>
+
+        <!-- Pause Screen -->
+        <div class="overlay hidden" id="pause-screen">
+            <div class="level-clear-title" style="color:#6c5ce7;text-shadow:0 0 30px rgba(108,92,231,0.8);">PAUSED</div>
+            <button class="btn btn-primary" onclick="togglePause()">RESUME</button>
+            <button class="btn btn-secondary" onclick="showStartScreen()">QUIT</button>
+        </div>
+
+        <!-- Powerup Toast -->
+        <div class="powerup-toast" id="powerup-toast"></div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

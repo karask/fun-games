@@ -27,6 +27,13 @@ const games = [
         genre: 'Roguelike RPG',
         thumb: 'assets/tinydungeon_thumb.png',
         url: 'games/tinydungeon/index.html'
+    },
+    {
+        id: 'breakout',
+        title: 'Neon Breakout',
+        genre: 'Brick Breaker',
+        thumb: 'assets/breakout_thumb.png',
+        url: 'games/breakout/index.html'
     }
 ];
 
