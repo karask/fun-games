@@ -131,6 +131,7 @@ function update() {
     }
 
     // Food
+    checkFoodExpiration();
     checkFood(player1);
     if (player2) checkFood(player2);
 
@@ -256,8 +257,20 @@ function spawnFood() {
     foods.push({
         x: newFood.x,
         y: newFood.y,
-        ...selectedType
+        ...selectedType,
+        spawnTime: Date.now()
     });
+}
+
+function checkFoodExpiration() {
+    const now = Date.now();
+    for (let i = foods.length - 1; i >= 0; i--) {
+        const f = foods[i];
+        if (f.type !== 'normal' && (now - f.spawnTime > 8000)) {
+            foods.splice(i, 1);
+            spawnFood();
+        }
+    }
 }
 
 function draw() {
