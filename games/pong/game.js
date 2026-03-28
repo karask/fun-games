@@ -13,6 +13,8 @@ const BALL_SIZE = 10;
 let score1 = 0;
 let score2 = 0;
 let gameStarted = false;
+let lastTime = 0;
+
 
 let p1 = { x: 20, y: canvas.height/2 - PADDLE_HEIGHT/2, dy: 0 };
 let p2 = { x: canvas.width - 30, y: canvas.height/2 - PADDLE_HEIGHT/2, dy: 0 };
@@ -45,17 +47,17 @@ function normalizeBallVelocity() {
     ball.dy = (ball.dy / magnitude) * ball.speed;
 }
 
-function update() {
+function update(dt) {
     // Move paddles
-    if (keys.w && p1.y > 0) p1.y -= PADDLE_SPEED;
-    if (keys.s && p1.y < canvas.height - PADDLE_HEIGHT) p1.y += PADDLE_SPEED;
+    if (keys.w && p1.y > 0) p1.y -= PADDLE_SPEED * dt;
+    if (keys.s && p1.y < canvas.height - PADDLE_HEIGHT) p1.y += PADDLE_SPEED * dt;
     
-    if (keys.ArrowUp && p2.y > 0) p2.y -= PADDLE_SPEED;
-    if (keys.ArrowDown && p2.y < canvas.height - PADDLE_HEIGHT) p2.y += PADDLE_SPEED;
+    if (keys.ArrowUp && p2.y > 0) p2.y -= PADDLE_SPEED * dt;
+    if (keys.ArrowDown && p2.y < canvas.height - PADDLE_HEIGHT) p2.y += PADDLE_SPEED * dt;
 
     // Move ball
-    ball.x += ball.dx;
-    ball.y += ball.dy;
+    ball.x += ball.dx * dt;
+    ball.y += ball.dy * dt;
 
     // Wall collision (top/bottom)
     if (ball.y < 0 || ball.y + BALL_SIZE > canvas.height) {
@@ -164,9 +166,14 @@ function drawStartScreen() {
     ctx.shadowBlur = 0;
 }
 
-function gameLoop() {
+function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp || performance.now();
+    let dt = (timestamp - lastTime) / 16.67;
+    if (dt > 3) dt = 3;
+    lastTime = timestamp;
+
     if (gameStarted) {
-        update();
+        update(dt);
     }
     draw();
     if (!gameStarted) {

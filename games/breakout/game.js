@@ -748,10 +748,10 @@ function update(dt) {
     // ── Paddle movement ──
     if (keys['ArrowLeft']) {
         usingKeyboard = true;
-        paddle.x = Math.max(paddle.w / 2, paddle.x - paddle.speed);
+        paddle.x = Math.max(paddle.w / 2, paddle.x - paddle.speed * dt);
     } else if (keys['ArrowRight']) {
         usingKeyboard = true;
-        paddle.x = Math.min(W - paddle.w / 2, paddle.x + paddle.speed);
+        paddle.x = Math.min(W - paddle.w / 2, paddle.x + paddle.speed * dt);
     } else if (!usingKeyboard) {
         // Only follow mouse when not in keyboard mode
         paddle.x = Math.max(paddle.w / 2, Math.min(W - paddle.w / 2, mouseX));
@@ -792,8 +792,8 @@ function update(dt) {
         ball.trail.unshift({ x: ball.x, y: ball.y });
         if (ball.trail.length > 10) ball.trail.pop();
 
-        ball.x += ball.vx;
-        ball.y += ball.vy;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
 
         // wall collisions
         if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = Math.abs(ball.vx); }
@@ -861,7 +861,7 @@ function update(dt) {
     }
 
     // Lasers
-    lasers.forEach(l => { l.y += l.vy; });
+    lasers.forEach(l => { l.y += l.vy * dt; });
     lasers = lasers.filter(l => l.y > 0);
     lasers.forEach(laser => {
         for (let i = bricks.length - 1; i >= 0; i--) {
@@ -878,7 +878,7 @@ function update(dt) {
     });
 
     // Powerups fall
-    powerups.forEach(p => { p.y += p.vy; p.angle += 0.05; });
+    powerups.forEach(p => { p.y += p.vy * dt; p.angle += 0.05 * dt; });
     powerups = powerups.filter(p => p.y < H + 20);
     // collect
     powerups = powerups.filter(p => {
@@ -890,9 +890,9 @@ function update(dt) {
 
     // Particles
     particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        p.vy += 0.06; // gravity
-        p.life -= p.decay;
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy += 0.06 * dt; // gravity
+        p.life -= p.decay * dt;
     });
     particles = particles.filter(p => p.life > 0);
 
