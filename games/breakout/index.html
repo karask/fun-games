@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neon Breakout</title>
+    <script>
+        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+            const base = document.createElement('base');
+            base.href = window.location.pathname + '/';
+            document.head.appendChild(base);
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
@@ -332,7 +339,7 @@
         <div class="overlay" id="start-screen">
             <div class="game-title">NEON BREAKOUT</div>
             <div class="subtitle">ARCADE EDITION · 20 LEVELS</div>
-            <button class="btn btn-primary" onclick="startGame()">START GAME</button>
+            <button class="btn btn-primary" onclick="window.startGame()">START GAME</button>
             <div class="controls-grid">
                 <span class="ctrl-key">← → / MOUSE</span><span>Move Paddle</span>
                 <span class="ctrl-key">SPACE</span><span>Launch / Fire</span>
@@ -345,7 +352,7 @@
             <div class="level-clear-title">LEVEL CLEAR!</div>
             <div class="level-info" id="level-clear-info">PREPARE FOR LEVEL 2</div>
             <div class="final-score">SCORE: <span id="clear-score-val">0</span></div>
-            <button class="btn btn-primary" onclick="nextLevel()">NEXT LEVEL →</button>
+            <button class="btn btn-primary" onclick="window.nextLevel()">NEXT LEVEL →</button>
         </div>
 
         <!-- Game Over Screen -->
@@ -354,8 +361,8 @@
             <div class="final-score">SCORE: <span id="go-score-val">0</span></div>
             <div class="final-score">LEVEL REACHED: <span id="go-level-val">1</span></div>
             <div class="highscore-tag" id="new-hs-tag" style="display:none;">★ NEW HIGH SCORE ★</div>
-            <button class="btn btn-primary" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
-            <button class="btn btn-secondary" onclick="showStartScreen()">MAIN MENU</button>
+            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
+            <button class="btn btn-secondary" onclick="window.showStartScreen()">MAIN MENU</button>
         </div>
 
         <!-- Victory Screen -->
@@ -364,15 +371,15 @@
             <div class="level-info">ALL 20 LEVELS CLEARED!</div>
             <div class="final-score">FINAL SCORE: <span id="win-score-val">0</span></div>
             <div class="highscore-tag" id="win-hs-tag" style="display:none;">★ NEW HIGH SCORE ★</div>
-            <button class="btn btn-primary" onclick="restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
-            <button class="btn btn-secondary" onclick="showStartScreen()">MAIN MENU</button>
+            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
+            <button class="btn btn-secondary" onclick="window.showStartScreen()">MAIN MENU</button>
         </div>
 
         <!-- Pause Screen -->
         <div class="overlay hidden" id="pause-screen">
             <div class="level-clear-title" style="color:#6c5ce7;text-shadow:0 0 30px rgba(108,92,231,0.8);">PAUSED</div>
-            <button class="btn btn-primary" onclick="togglePause()">RESUME</button>
-            <button class="btn btn-secondary" onclick="showStartScreen()">QUIT</button>
+            <button class="btn btn-primary" onclick="window.togglePause()">RESUME</button>
+            <button class="btn btn-secondary" onclick="window.showStartScreen()">QUIT</button>
         </div>
 
         <!-- Powerup Toast -->

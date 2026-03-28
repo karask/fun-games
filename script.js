@@ -34,6 +34,13 @@ const games = [
         genre: 'Brick Breaker',
         thumb: 'assets/breakout_thumb.png',
         url: 'games/breakout/index.html'
+    },
+    {
+        id: 'neondog',
+        title: 'Neon Dog Platformer',
+        genre: 'Platformer',
+        thumb: 'assets/neondog_thumb.png',
+        url: 'games/neondog/index.html'
     }
 ];
 

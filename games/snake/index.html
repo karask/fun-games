@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neon Snake</title>
+    <script>
+        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+            const base = document.createElement('base');
+            base.href = window.location.pathname + '/';
+            document.head.appendChild(base);
+        }
+    </script>
     <!-- Prevent caching to ensure new JS loads -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -165,8 +172,8 @@
         <div id="start-screen" class="overlay">
             <h1 class="title">Neon Snake</h1>
             <div class="menu">
-                <button onclick="startGameMode(1)">1 Player</button>
-                <button onclick="startGameMode(2)">2 Players</button>
+                <button onclick="window.startGameMode(1)">1 Player</button>
+                <button onclick="window.startGameMode(2)">2 Players</button>
             </div>
             <div class="controls-info">
                 <p><strong>1 Player:</strong> Use Arrows or WASD</p>
@@ -182,7 +189,7 @@
 
         <div id="game-over" class="overlay" style="display:none;">
             <h2 id="winner-text">GAME OVER</h2>
-            <button onclick="showMenu()">MAIN MENU</button>
+            <button onclick="window.showMenu()">MAIN MENU</button>
         </div>
     </div>
 

@@ -50,13 +50,30 @@ const imgs = {
     Mage: new Image(),
     Priest: new Image(),
     Rogue: new Image(),
-    Stairs: new Image()
+    Stairs: new Image(),
+    // Monsters
+    Goblin: new Image(),
+    Skeleton: new Image(),
+    Orc: new Image(),
+    Wraith: new Image(),
+    Giant: new Image(),
+    Lich: new Image(),
+    'Orc Chieftain': new Image()
 };
-imgs.Fighter.src = '../../assets/fighter.png';
-imgs.Mage.src = '../../assets/mage.png';
-imgs.Priest.src = '../../assets/priest.png';
-imgs.Rogue.src = '../../assets/rogue.png';
-imgs.Stairs.src = '../../assets/stairs.png';
+imgs.Fighter.src = 'assets/fighter.png';
+imgs.Mage.src = 'assets/mage.png';
+imgs.Priest.src = 'assets/priest.png';
+imgs.Rogue.src = 'assets/rogue.png';
+imgs.Stairs.src = 'assets/stairs.png';
+
+// Load monster images
+imgs.Goblin.src = 'assets/goblin.png';
+imgs.Skeleton.src = 'assets/skeleton.png';
+imgs.Orc.src = 'assets/orc.png';
+imgs.Wraith.src = 'assets/wraith.png';
+imgs.Giant.src = 'assets/giant.png';
+imgs.Lich.src = 'assets/lich.png';
+imgs['Orc Chieftain'].src = 'assets/orc_chieftain.png';
 
 // Data
 const ITEM_TYPES = [
@@ -662,10 +679,15 @@ function renderLoop() {
                 let rx = (e.renderX + e.animOffsetX) * TILE_SIZE;
                 let ry = (e.renderY + e.animOffsetY) * TILE_SIZE;
                 
-                ctx.fillStyle = e.damageFlash > 0 ? '#fff' : e.color;
-                ctx.font = e.isBoss ? '30px Arial' : '24px Arial';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(e.char, rx + TILE_SIZE/2, ry + TILE_SIZE/2);
+                let mImg = imgs[e.name];
+                if(mImg && mImg.complete && mImg.naturalHeight !== 0) {
+                    ctx.drawImage(mImg, rx, ry, TILE_SIZE, TILE_SIZE);
+                } else {
+                    ctx.fillStyle = e.damageFlash > 0 ? '#fff' : e.color;
+                    ctx.font = e.isBoss ? '30px Arial' : '24px Arial';
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(e.char, rx + TILE_SIZE/2, ry + TILE_SIZE/2);
+                }
                 
                 // HP Bar
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';

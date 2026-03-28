@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neon Survival</title>
+    <script>
+        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+            const base = document.createElement('base');
+            base.href = window.location.pathname + '/';
+            document.head.appendChild(base);
+        }
+    </script>
     <style>
         body {
             margin: 0;
@@ -108,10 +115,10 @@
         <div id="game-over">
             <h2>GAME OVER</h2>
             <div id="final-score">Score: 0</div>
-            <button onclick="resetGame()">PLAY AGAIN</button>
+            <button onclick="window.resetGame()">PLAY AGAIN</button>
         </div>
     </div>
 
-    <script src="game.js?v=2"></script>
+    <script src="game.js?v=4"></script>
 </body>
 </html>

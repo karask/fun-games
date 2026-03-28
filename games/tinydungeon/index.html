@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tiny Dungeon</title>
+    <script>
+        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+            const base = document.createElement('base');
+            base.href = window.location.pathname + '/';
+            document.head.appendChild(base);
+        }
+    </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -251,10 +258,10 @@
             <div id="class-select">
                 <h3 style="text-align:center; color:#dcdde1;">Select Your Class</h3>
                 <div class="menu">
-                    <button class="class-btn Fighter" onclick="startGame('Fighter')">Fighter</button>
-                    <button class="class-btn Mage" onclick="startGame('Mage')">Mage</button>
-                    <button class="class-btn Priest" onclick="startGame('Priest')">Priest</button>
-                    <button class="class-btn Rogue" onclick="startGame('Rogue')">Rogue</button>
+                    <button class="class-btn Fighter" onclick="window.startGame('Fighter')">Fighter</button>
+                    <button class="class-btn Mage" onclick="window.startGame('Mage')">Mage</button>
+                    <button class="class-btn Priest" onclick="window.startGame('Priest')">Priest</button>
+                    <button class="class-btn Rogue" onclick="window.startGame('Rogue')">Rogue</button>
                 </div>
             </div>
 
@@ -274,7 +281,7 @@
             <div class="inv-container">
                 <div class="inv-header">
                     <h2 style="margin:0;">Inventory</h2>
-                    <span style="color:#7f8fa6; cursor:pointer;" onclick="toggleInventory()">[Close (I)]</span>
+                    <span style="color:#7f8fa6; cursor:pointer;" onclick="window.toggleInventory()">[Close (I)]</span>
                 </div>
                 <div class="inv-content">
                     <div class="inv-slots">

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Dog Platformer</title>
+    <script>
+        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+            const base = document.createElement('base');
+            base.href = window.location.pathname + '/';
+            document.head.appendChild(base);
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="hud">
+            <div class="hud-group">
+                <span class="hud-label">Score</span>
+                <span class="hud-value" id="score-val">0</span>
+            </div>
+            <div class="hud-group">
+                <span class="hud-label">Health</span>
+                <div class="lives-display" id="lives-display">
+                    <div class="life-ball" id="life-0"></div>
+                    <div class="life-ball" id="life-1"></div>
+                    <div class="life-ball" id="life-2"></div>
+                </div>
+            </div>
+            <div class="hud-group" id="news-hud" style="display:none;">
+                <span class="hud-label">Objective</span>
+                <span class="hud-value" style="color: #ffd32a" id="news-val">DELIVER NOW</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="560"></canvas>
+
+        <!-- Start Screen -->
+        <div class="overlay" id="start-screen">
+            <div class="game-title" style="font-size: 52px; font-weight: 900; letter-spacing: 4px; background: linear-gradient(135deg, #00d2d3, #ff4757, #fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 20px rgba(255, 71, 87, 0.8)); margin-bottom: 8px;">NEON DOG</div>
+            <div class="subtitle" style="font-size: 11px; letter-spacing: 5px; color: rgba(160, 160, 180, 0.6); margin-bottom: 40px; text-transform: uppercase;">A Post-Apocalyptic Delivery</div>
+            <button class="btn btn-primary" onclick="window.startGame()">START GAME</button>
+            <div class="controls-grid">
+                <span class="ctrl-key">A / D or ← / →</span><span>Move</span>
+                <span class="ctrl-key">W or ↑ or SPACE</span><span>Jump</span>
+                <span class="ctrl-key">E or B</span><span>Bark (Stun)</span>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div class="overlay hidden" id="gameover-screen">
+            <div class="gameover-title" style="font-size: 52px; font-weight: 900; letter-spacing: 4px; color: #ff4757; text-shadow: 0 0 30px rgba(255, 71, 87, 0.8); margin-bottom: 10px;">WASTED</div>
+            <div class="final-score" style="font-size: 16px; color: rgba(160, 160, 180, 0.8); letter-spacing: 2px; margin-bottom: 6px;">DISTANCE: <span id="go-score-val" style="color: #ffd32a;">0m</span></div>
+            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:20px;">TRY AGAIN</button>
+        </div>
+
+        <!-- Victory Screen -->
+        <div class="overlay hidden" id="victory-screen">
+            <div class="win-title" style="font-size: 44px; font-weight: 900; letter-spacing: 4px; margin-bottom: 10px; background: linear-gradient(135deg, #ffd32a, #fd79a8, #00d2d3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 20px rgba(255, 211, 42, 0.8));">DELIVERED!</div>
+            <div class="level-info" style="font-size: 13px; color: rgba(160, 160, 180, 0.7); letter-spacing: 3px; margin-bottom: 30px;">GOOD BOY! HUGO IS HAPPY.</div>
+            <div class="final-score" style="font-size: 16px; color: rgba(160, 160, 180, 0.8); letter-spacing: 2px; margin-bottom: 6px;">SCORE: <span id="win-score-val" style="color: #ffd32a;">0</span></div>
+            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:20px;">PLAY AGAIN</button>
+        </div>
+        
+    </div>
+
+    <!-- Hidden Images for Canvas -->
+    <div style="display: none;">
+        <img id="bgImg" src="assets/bg.png">
+        <img id="dogSprite" src="assets/dog_spritesheet.png">
+        <img id="droneImg" src="assets/drone.png">
+        <img id="newsImg" src="assets/newspaper.png">
+        <img id="tilesImg" src="assets/tileset.png">
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
