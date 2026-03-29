@@ -23,6 +23,7 @@
             <header class="top-bar">
                 <h2 id="current-game-title">Select a Game</h2>
                 <div class="user-profile">
+                    <button id="leaderboard-btn" class="hs-btn">🏆 Trophy Room</button>
                     <div class="avatar"></div>
                 </div>
             </header>
@@ -40,7 +41,16 @@
             </section>
         </main>
     </div>
+    <!-- High Score Modal -->
+    <div id="hs-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-modal">&times;</span>
+            <h2 class="modal-title">Arcade Leaderboards</h2>
+            <div class="tabs" id="hs-tabs"></div>
+            <div class="tab-content" id="hs-content"></div>
+        </div>
+    </div>
     
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>

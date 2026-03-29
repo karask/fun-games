@@ -339,6 +339,7 @@
         <div class="overlay" id="start-screen">
             <div class="game-title">NEON BREAKOUT</div>
             <div class="subtitle">ARCADE EDITION · 20 LEVELS</div>
+            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
             <button class="btn btn-primary" onclick="window.startGame()">START GAME</button>
             <div class="controls-grid">
                 <span class="ctrl-key">← → / MOUSE</span><span>Move Paddle</span>
@@ -360,9 +361,22 @@
             <div class="gameover-title">GAME OVER</div>
             <div class="final-score">SCORE: <span id="go-score-val">0</span></div>
             <div class="final-score">LEVEL REACHED: <span id="go-level-val">1</span></div>
-            <div class="highscore-tag" id="new-hs-tag" style="display:none;">★ NEW HIGH SCORE ★</div>
-            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
-            <button class="btn btn-secondary" onclick="window.showStartScreen()">MAIN MENU</button>
+            
+            <div id="go-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
+            
+            <div id="go-hs-input" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);">NEW HIGH SCORE!</h3>
+                <p style="margin-bottom: 15px; font-weight: bold; font-family: Inter, sans-serif;">PLEASE ENTER YOUR INITIALS:</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="go-hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none; font-family: 'Orbitron', monospace;">
+                    <button class="btn btn-primary" id="go-hs-submit">SUBMIT</button>
+                </div>
+            </div>
+
+            <div id="go-buttons" style="display:flex; flex-direction: column; align-items: center;">
+                <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
+                <button class="btn btn-secondary" onclick="window.showStartScreen()">MAIN MENU</button>
+            </div>
         </div>
 
         <!-- Victory Screen -->
@@ -370,9 +384,22 @@
             <div class="win-title">YOU WIN!</div>
             <div class="level-info">ALL 20 LEVELS CLEARED!</div>
             <div class="final-score">FINAL SCORE: <span id="win-score-val">0</span></div>
-            <div class="highscore-tag" id="win-hs-tag" style="display:none;">★ NEW HIGH SCORE ★</div>
-            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
-            <button class="btn btn-secondary" onclick="window.showStartScreen()">MAIN MENU</button>
+            
+            <div id="win-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
+            
+            <div id="win-hs-input" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);">NEW HIGH SCORE!</h3>
+                <p style="margin-bottom: 15px; font-weight: bold; font-family: Inter, sans-serif;">PLEASE ENTER YOUR INITIALS:</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="win-hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none; font-family: 'Orbitron', monospace;">
+                    <button class="btn btn-primary" id="win-hs-submit">SUBMIT</button>
+                </div>
+            </div>
+
+            <div id="win-buttons" style="display:flex; flex-direction: column; align-items: center;">
+                <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:10px;">PLAY AGAIN</button>
+                <button class="btn btn-secondary" onclick="window.showStartScreen()">MAIN MENU</button>
+            </div>
         </div>
 
         <!-- Pause Screen -->
@@ -386,7 +413,12 @@
         <div class="powerup-toast" id="powerup-toast"></div>
     </div>
 
-    <script src="game.js"></script>
+    <script type="module">
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'game.js?v=' + new Date().getTime();
+        document.body.appendChild(script);
+    </script>
 </body>
 
 </html>

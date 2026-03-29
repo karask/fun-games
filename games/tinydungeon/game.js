@@ -1,4 +1,5 @@
 // Tiny Dungeon Game Logic
+import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -20,6 +21,7 @@ const invStatsPanel = document.getElementById('inv-stats-panel');
 let gameState = 'START'; // START, PLAYING, INVENTORY, DEATH, WIN
 let currentFloor = 1;
 let messages = [];
+let totalXp = 0;
 
 let map = []; // 0 = floor, 1 = wall, 2 = stairs
 let explored = [];
@@ -164,8 +166,14 @@ function updateHUD() {
 
 window.startGame = function(className) {
     if(gameState === 'DEATH' || gameState === 'WIN') {
-        currentFloor = 1; messages = [];
+        currentFloor = 1; messages = []; totalXp = 0;
     }
+    
+    document.getElementById('start-leaderboard').style.display = 'none';
+    document.getElementById('end-leaderboard').style.display = 'none';
+    document.getElementById('end-score-display').style.display = 'none';
+    document.getElementById('end-hs-input').style.display = 'none';
+    document.getElementById('end-button-container').style.display = 'none';
     
     startScreen.style.display = 'none';
     uiOverlay.style.display = 'flex';
@@ -176,6 +184,21 @@ window.startGame = function(className) {
     initPlayer(className);
     generateFloor();
 }
+
+window.backToMenu = function() {
+    startScreen.style.display = 'flex';
+    document.getElementById('class-select').style.display = 'block';
+    
+    document.getElementById('start-leaderboard').style.display = 'block';
+    document.getElementById('start-leaderboard').innerHTML = generateLeaderboardHTML('tinydungeon');
+    
+    deathMsg.style.display = 'none';
+    document.getElementById('end-leaderboard').style.display = 'none';
+    document.getElementById('end-score-display').style.display = 'none';
+    document.getElementById('end-hs-input').style.display = 'none';
+    document.getElementById('end-button-container').style.display = 'none';
+    gameState = 'START';
+};
 
 function initPlayer(className) {
     player = {
@@ -415,6 +438,7 @@ function killEnemy(enemy) {
     entities = entities.filter(e => e !== enemy);
     
     player.xp += enemy.xp;
+    totalXp += enemy.xp;
     if(player.xp >= player.nextXp) levelUp();
     
     // Extremely rare drops! 3% chance for normal enemies, 100% for bosses
@@ -429,27 +453,71 @@ function levelUp() {
     logMsg(`Level Up! You are now level ${player.level}.`, 'good');
 }
 
-function killPlayer() {
-    player.dead = true; gameState = 'DEATH';
+function handleEndGame(isWin) {
+    gameState = isWin ? 'WIN' : 'DEATH';
     setTimeout(() => {
-        uiOverlay.style.display = 'none'; startScreen.style.display = 'flex';
+        uiOverlay.style.display = 'none'; 
+        startScreen.style.display = 'flex';
         document.getElementById('class-select').style.display = 'none';
+        
         deathMsg.style.display = 'block';
-        setTimeout(() => {
-            document.getElementById('class-select').style.display = 'block';
-            deathMsg.innerHTML = 'You have died!<br><span style="font-size:18px; color:#fff;">Select a class to try again.</span>';
-        }, 1500);
+        deathMsg.style.color = isWin ? '#fbc531' : '#e84118';
+        deathMsg.innerHTML = isWin ? 'VICTORY!<br><span style="font-size:18px; color:#fff;">You have conquered the Tiny Dungeon!</span>' : 'You have died!<br><span style="font-size:18px; color:#fff;">Better luck next time.</span>';
+        
+        document.getElementById('end-score-display').style.display = 'block';
+        document.getElementById('final-score-val').textContent = totalXp;
+        document.getElementById('end-button-container').style.display = 'flex';
+        
+        // Hide start leaderboard
+        document.getElementById('start-leaderboard').style.display = 'none';
+        
+        const uiInputSectionId = 'end-hs-input';
+        const uiInitialsId = 'end-hs-initials';
+        const uiSubmitId = 'end-hs-submit';
+        const uiLeaderboardId = 'end-leaderboard';
+        const uiInputBtnContainerId = 'end-button-container';
+        
+        const inputEl = document.getElementById(uiInitialsId);
+        if (!inputEl.dataset.listener) {
+            inputEl.addEventListener('keydown', (e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') document.getElementById(uiSubmitId).click();
+            });
+            inputEl.dataset.listener = 'true';
+        }
+        
+        if (isHighScore('tinydungeon', totalXp)) {
+            document.getElementById(uiInputBtnContainerId).style.display = 'none';
+            document.getElementById(uiLeaderboardId).style.display = 'none';
+            document.getElementById(uiInputSectionId).style.display = 'flex';
+            inputEl.value = '';
+            
+            document.getElementById(uiSubmitId).onclick = () => {
+                const initials = inputEl.value.trim().toUpperCase().substring(0, 3);
+                if (initials.length > 0) {
+                    saveHighScore('tinydungeon', initials, totalXp);
+                    document.getElementById(uiInputSectionId).style.display = 'none';
+                    document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+                    document.getElementById(uiLeaderboardId).style.display = 'block';
+                    document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('tinydungeon');
+                }
+            };
+        } else {
+            document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+            document.getElementById(uiInputSectionId).style.display = 'none';
+            document.getElementById(uiLeaderboardId).style.display = 'block';
+            document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('tinydungeon');
+        }
     }, 500);
 }
 
+function killPlayer() {
+    player.dead = true;
+    handleEndGame(false);
+}
+
 function winGame() {
-    gameState = 'WIN';
-    setTimeout(() => {
-        uiOverlay.style.display = 'none'; startScreen.style.display = 'flex';
-        document.getElementById('class-select').style.display = 'block';
-        deathMsg.style.display = 'block'; deathMsg.style.color = '#fbc531';
-        deathMsg.innerHTML = 'VICTORY!<br><span style="font-size:18px; color:#fff;">You have conquered the Tiny Dungeon!</span>';
-    }, 500);
+    handleEndGame(true);
 }
 
 function descendStairs() {
@@ -796,3 +864,7 @@ document.addEventListener('keydown', (e) => {
     
     if (acted) e.preventDefault();
 });
+
+// Setup Initial View
+const sl = document.getElementById('start-leaderboard');
+if (sl) sl.innerHTML = generateLeaderboardHTML('tinydungeon');

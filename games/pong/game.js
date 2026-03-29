@@ -1,7 +1,20 @@
+import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreP1Element = document.getElementById('score-p1');
 const scoreP2Element = document.getElementById('score-p2');
+
+const startScreenElement = document.getElementById('start-screen');
+const gameOverElement = document.getElementById('game-over');
+const winnerTextElement = document.getElementById('winner-text');
+const rallyTextElement = document.getElementById('rally-text');
+const startLeaderboardElement = document.getElementById('start-leaderboard');
+const gameOverLeaderboardElement = document.getElementById('game-over-leaderboard');
+const hsInputSection = document.getElementById('hs-input-section');
+const hsInitials = document.getElementById('hs-initials');
+const hsSubmitBtn = document.getElementById('hs-submit-btn');
+const mainMenuBtn = document.getElementById('main-menu-btn');
 
 // Paddle constants
 const PADDLE_WIDTH = 10;
@@ -12,8 +25,12 @@ const BALL_SIZE = 10;
 // Game state
 let score1 = 0;
 let score2 = 0;
+let rallyCount = 0;
+let maxRally = 0;
 let gameStarted = false;
+let gameOver = false;
 let lastTime = 0;
+let animFrame;
 
 
 let p1 = { x: 20, y: canvas.height/2 - PADDLE_HEIGHT/2, dy: 0 };
@@ -80,6 +97,9 @@ function update(dt) {
         let hitPoint = (ball.y + BALL_SIZE/2) - (p1.y + PADDLE_HEIGHT/2);
         ball.dy = hitPoint * 0.15;
         
+        rallyCount++;
+        maxRally = Math.max(maxRally, rallyCount);
+        
         // Increase speed slightly
         ball.speed = Math.min(ball.speed + 0.5, 12);
         normalizeBallVelocity();
@@ -97,6 +117,9 @@ function update(dt) {
         let hitPoint = (ball.y + BALL_SIZE/2) - (p2.y + PADDLE_HEIGHT/2);
         ball.dy = hitPoint * 0.15;
         
+        rallyCount++;
+        maxRally = Math.max(maxRally, rallyCount);
+        
         ball.speed = Math.min(ball.speed + 0.5, 12);
         normalizeBallVelocity();
         ball.x = p2.x - BALL_SIZE; // Prevent sticking
@@ -106,13 +129,77 @@ function update(dt) {
     if (ball.x < 0) {
         score2++;
         scoreP2Element.textContent = score2;
-        resetBall();
+        rallyCount = 0;
+        checkWin();
+        if (!gameOver) resetBall();
     } else if (ball.x > canvas.width) {
         score1++;
         scoreP1Element.textContent = score1;
-        resetBall();
+        rallyCount = 0;
+        checkWin();
+        if (!gameOver) resetBall();
     }
 }
+
+function checkWin() {
+    if (score1 >= 5 || score2 >= 5) {
+        gameOver = true;
+        gameStarted = false;
+        showGameOver();
+    }
+}
+
+function showGameOver() {
+    winnerTextElement.textContent = score1 >= 5 ? 'PLAYER 1 WINS' : 'PLAYER 2 WINS';
+    winnerTextElement.style.color = score1 >= 5 ? '#ff9ff3' : '#48dbfb';
+    rallyTextElement.textContent = `Longest Rally: ${maxRally}`;
+    
+    if (isHighScore('pong', maxRally)) {
+        mainMenuBtn.style.display = 'none';
+        gameOverLeaderboardElement.style.display = 'none';
+        hsInputSection.style.display = 'flex';
+        hsInitials.value = '';
+        
+        hsSubmitBtn.onclick = () => {
+            const initials = hsInitials.value.trim().toUpperCase().substring(0, 3);
+            if (initials.length > 0) {
+                saveHighScore('pong', initials, maxRally);
+                showPostGameLeaderboard();
+            }
+        };
+    } else {
+        showPostGameLeaderboard();
+    }
+    
+    gameOverElement.style.display = 'flex';
+}
+
+function showPostGameLeaderboard() {
+    hsInputSection.style.display = 'none';
+    mainMenuBtn.style.display = 'block';
+    gameOverLeaderboardElement.style.display = 'block';
+    gameOverLeaderboardElement.innerHTML = generateLeaderboardHTML('pong');
+}
+
+window.startGame = function() {
+    score1 = 0;
+    score2 = 0;
+    maxRally = 0;
+    rallyCount = 0;
+    scoreP1Element.textContent = 0;
+    scoreP2Element.textContent = 0;
+    gameOver = false;
+    gameStarted = true;
+    startScreenElement.style.display = 'none';
+    gameOverElement.style.display = 'none';
+    resetBall();
+};
+
+window.showMenu = function() {
+    startScreenElement.style.display = 'flex';
+    gameOverElement.style.display = 'none';
+    startLeaderboardElement.innerHTML = generateLeaderboardHTML('pong');
+};
 
 function drawDashLine() {
     ctx.beginPath();
@@ -172,14 +259,11 @@ function gameLoop(timestamp) {
     if (dt > 3) dt = 3;
     lastTime = timestamp;
 
-    if (gameStarted) {
+    if (gameStarted && !gameOver) {
         update(dt);
     }
     draw();
-    if (!gameStarted) {
-        drawStartScreen();
-    }
-    requestAnimationFrame(gameLoop);
+    animFrame = requestAnimationFrame(gameLoop);
 }
 
 // Input Handlers
@@ -208,4 +292,13 @@ document.addEventListener('keyup', (e) => {
 });
 
 // Start initially paused
-gameLoop();
+startLeaderboardElement.innerHTML = generateLeaderboardHTML('pong');
+animFrame = requestAnimationFrame(gameLoop);
+
+// Setup Initials input handler
+hsInitials.addEventListener('keydown', (e) => {
+    e.stopPropagation(); 
+    if (e.key === 'Enter') {
+        hsSubmitBtn.click();
+    }
+});

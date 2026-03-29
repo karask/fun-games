@@ -1,3 +1,5 @@
+import { generateLeaderboardHTML } from './assets/highscore.js';
+
 // Game Data
 const games = [
     {
@@ -50,9 +52,17 @@ const gameFrame = document.getElementById('game-frame');
 const emptyState = document.getElementById('empty-state');
 const currentGameTitle = document.getElementById('current-game-title');
 
+// Modal Elements
+const leaderboardBtn = document.getElementById('leaderboard-btn');
+const hsModal = document.getElementById('hs-modal');
+const closeModalBtn = document.getElementById('close-modal');
+const hsTabs = document.getElementById('hs-tabs');
+const hsContent = document.getElementById('hs-content');
+
 // Initialize App
 function init() {
     renderGameList();
+    setupLeaderboardUI();
 
     // Handle iframe load event for smooth appearance
     gameFrame.addEventListener('load', () => {
@@ -109,6 +119,51 @@ function selectGame(game) {
     setTimeout(() => {
         gameFrame.src = game.url;
     }, 50);
+}
+
+// Setup Modal
+function setupLeaderboardUI() {
+    leaderboardBtn.addEventListener('click', () => {
+        hsModal.classList.add('show');
+        renderLeaderboardModal();
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        hsModal.classList.remove('show');
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === hsModal) {
+            hsModal.classList.remove('show');
+        }
+    });
+}
+
+function renderLeaderboardModal() {
+    hsTabs.innerHTML = '';
+    
+    // Create tabs
+    games.forEach((game, index) => {
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${index === 0 ? 'active' : ''}`;
+        btn.textContent = game.title;
+        btn.onclick = () => renderTabContent(game.id, btn);
+        hsTabs.appendChild(btn);
+    });
+
+    // Render first tab by default
+    if (games.length > 0) {
+        renderTabContent(games[0].id, hsTabs.firstChild);
+    }
+}
+
+function renderTabContent(gameId, activeBtn) {
+    // Update active tab styles
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    activeBtn.classList.add('active');
+
+    // Get and set html from our shared library
+    hsContent.innerHTML = generateLeaderboardHTML(gameId);
 }
 
 // Bootstrap

@@ -1,4 +1,5 @@
 'use strict';
+import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
 
 // ─────────────────────────────────────────────
 //  CONSTANTS & CONFIG
@@ -460,8 +461,8 @@ function startGame() {
     showOverlay(null);
     updateHUD();
     initLevel(0);
-    // Loop is started by idleLoop transition or already running
 }
+window.startGame = startGame;
 
 function restartGame() {
     if (animId) { cancelAnimationFrame(animId); animId = null; }
@@ -475,9 +476,15 @@ function restartGame() {
     lastTime = performance.now();
     animId = requestAnimationFrame(loop);
 }
+window.restartGame = restartGame;
 
 function showStartScreen() {
     state.phase = 'start';
+    
+    // Refresh Leaderboard
+    const sl = document.getElementById('start-leaderboard');
+    if (sl) sl.innerHTML = generateLeaderboardHTML('breakout');
+    
     showOverlay('start-screen');
     if (animId) { cancelAnimationFrame(animId); animId = null; }
     // Restart idle loop
@@ -506,6 +513,7 @@ function showStartScreen() {
         }
     })(0);
 }
+window.showStartScreen = showStartScreen;
 
 function nextLevel() {
     if (state.level >= MAX_LEVELS) {
@@ -518,24 +526,79 @@ function nextLevel() {
     updateHUD();
     initLevel(state.level - 1);
 }
+window.nextLevel = nextLevel;
 
 function showVictory() {
     state.phase = 'victory';
-    const isNewHS = state.score > state.highScore;
-    if (isNewHS) { state.highScore = state.score; localStorage.setItem(HIGH_SCORE_KEY, state.highScore); }
     document.getElementById('win-score-val').textContent = state.score;
-    document.getElementById('win-hs-tag').style.display = isNewHS ? 'block' : 'none';
+    
+    const uiInputBtnContainerId = 'win-buttons';
+    const uiInputSectionId = 'win-hs-input';
+    const uiInitialsId = 'win-hs-initials';
+    const uiSubmitId = 'win-hs-submit';
+    const uiLeaderboardId = 'win-leaderboard';
+    
+    if (isHighScore('breakout', state.score)) {
+        document.getElementById(uiInputBtnContainerId).style.display = 'none';
+        document.getElementById(uiLeaderboardId).style.display = 'none';
+        document.getElementById(uiInputSectionId).style.display = 'flex';
+        document.getElementById(uiInitialsId).value = '';
+        
+        document.getElementById(uiSubmitId).onclick = () => {
+            const initials = document.getElementById(uiInitialsId).value.trim().toUpperCase().substring(0, 3);
+            if (initials.length > 0) {
+                saveHighScore('breakout', initials, state.score);
+                document.getElementById(uiInputSectionId).style.display = 'none';
+                document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+                document.getElementById(uiLeaderboardId).style.display = 'block';
+                document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('breakout');
+            }
+        };
+    } else {
+        document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+        document.getElementById(uiInputSectionId).style.display = 'none';
+        document.getElementById(uiLeaderboardId).style.display = 'block';
+        document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('breakout');
+    }
+    
     showOverlay('victory-screen');
     updateHUD();
 }
 
 function showGameOver() {
     state.phase = 'gameover';
-    const isNewHS = state.score > state.highScore;
-    if (isNewHS) { state.highScore = state.score; localStorage.setItem(HIGH_SCORE_KEY, state.highScore); }
     document.getElementById('go-score-val').textContent = state.score;
     document.getElementById('go-level-val').textContent = state.level;
-    document.getElementById('new-hs-tag').style.display = isNewHS ? 'block' : 'none';
+    
+    const uiInputBtnContainerId = 'go-buttons';
+    const uiInputSectionId = 'go-hs-input';
+    const uiInitialsId = 'go-hs-initials';
+    const uiSubmitId = 'go-hs-submit';
+    const uiLeaderboardId = 'go-leaderboard';
+    
+    if (isHighScore('breakout', state.score)) {
+        document.getElementById(uiInputBtnContainerId).style.display = 'none';
+        document.getElementById(uiLeaderboardId).style.display = 'none';
+        document.getElementById(uiInputSectionId).style.display = 'flex';
+        document.getElementById(uiInitialsId).value = '';
+        
+        document.getElementById(uiSubmitId).onclick = () => {
+            const initials = document.getElementById(uiInitialsId).value.trim().toUpperCase().substring(0, 3);
+            if (initials.length > 0) {
+                saveHighScore('breakout', initials, state.score);
+                document.getElementById(uiInputSectionId).style.display = 'none';
+                document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+                document.getElementById(uiLeaderboardId).style.display = 'block';
+                document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('breakout');
+            }
+        };
+    } else {
+        document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+        document.getElementById(uiInputSectionId).style.display = 'none';
+        document.getElementById(uiLeaderboardId).style.display = 'block';
+        document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('breakout');
+    }
+    
     showOverlay('gameover-screen');
     updateHUD();
 }
@@ -561,6 +624,7 @@ function togglePause() {
         animId = null;
     }
 }
+window.togglePause = togglePause;
 
 function showOverlay(id) {
     const ids = ['start-screen', 'level-clear-screen', 'gameover-screen', 'victory-screen', 'pause-screen'];
@@ -1245,6 +1309,20 @@ canvas.addEventListener('touchstart', e => {
 //  INIT
 // ─────────────────────────────────────────────
 updateHUD();
+
+// Helper to enter submit from keyboard
+document.getElementById('go-hs-initials').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') document.getElementById('go-hs-submit').click();
+});
+document.getElementById('win-hs-initials').addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') document.getElementById('win-hs-submit').click();
+});
+
+const sl = document.getElementById('start-leaderboard');
+if (sl) sl.innerHTML = generateLeaderboardHTML('breakout');
+
 // Start the render loop even on start screen (show animated background)
 (function idleLoop(ts) {
     if (state.phase === 'start') {

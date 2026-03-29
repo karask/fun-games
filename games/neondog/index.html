@@ -42,8 +42,9 @@
                 style="font-size: 52px; font-weight: 900; letter-spacing: 4px; background: linear-gradient(135deg, #00d2d3, #ff4757, #fd79a8); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 20px rgba(255, 71, 87, 0.8)); margin-bottom: 8px;">
                 NEON DOG</div>
             <div class="subtitle"
-                style="font-size: 11px; letter-spacing: 5px; color: rgba(160, 160, 180, 0.6); margin-bottom: 40px; text-transform: uppercase;">
+                style="font-size: 11px; letter-spacing: 5px; color: rgba(160, 160, 180, 0.6); margin-bottom: 20px; text-transform: uppercase;">
                 A Post-Apocalyptic Delivery</div>
+            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
             <button class="btn btn-primary" onclick="window.startGame()">START GAME</button>
             <div class="controls-grid">
                 <span class="ctrl-key">A / D or ← / →</span><span>Move</span>
@@ -58,23 +59,53 @@
                 style="font-size: 52px; font-weight: 900; letter-spacing: 4px; color: #ff4757; text-shadow: 0 0 30px rgba(255, 71, 87, 0.8); margin-bottom: 10px;">
                 WASTED</div>
             <div class="final-score"
-                style="font-size: 16px; color: rgba(160, 160, 180, 0.8); letter-spacing: 2px; margin-bottom: 6px;">
-                DISTANCE: <span id="go-score-val" style="color: #ffd32a;">0m</span></div>
-            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:20px;">TRY AGAIN</button>
+                style="font-size: 16px; color: rgba(160, 160, 180, 0.8); letter-spacing: 2px; margin-bottom: 10px;">
+                DISTANCE: <span id="go-score-val" style="color: #ffd32a;">0</span>m</div>
+                
+            <div id="go-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
+            
+            <div id="go-hs-input" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5); font-family: Orbitron, sans-serif;">NEW HIGH SCORE!</h3>
+                <p style="margin-bottom: 15px; font-weight: bold; color: #fff;">PLEASE ENTER YOUR INITIALS:</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="go-hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none; font-family: Orbitron;">
+                    <button class="btn btn-primary" id="go-hs-submit">SUBMIT</button>
+                </div>
+            </div>
+
+            <div id="go-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" onclick="window.restartGame()">TRY AGAIN</button>
+                <button class="btn btn-secondary" onclick="window.showMenu()">MAIN MENU</button>
+            </div>
         </div>
 
         <!-- Victory Screen -->
         <div class="overlay hidden" id="victory-screen">
             <div class="win-title"
-                style="font-size: 44px; font-weight: 900; letter-spacing: 4px; margin-bottom: 10px; background: linear-gradient(135deg, #ffd32a, #fd79a8, #00d2d3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 20px rgba(255, 211, 42, 0.8));">
+                style="font-size: 44px; font-weight: 900; letter-spacing: 4px; margin-bottom: 10px; background: linear-gradient(135deg, #ffd32a, #fd79a8, #00d2d3); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 20px rgba(255, 211, 42, 0.8));">
                 DELIVERED!</div>
             <div class="level-info"
-                style="font-size: 13px; color: rgba(160, 160, 180, 0.7); letter-spacing: 3px; margin-bottom: 30px;">GOOD
+                style="font-size: 13px; color: rgba(160, 160, 180, 0.7); letter-spacing: 3px; margin-bottom: 10px;">GOOD
                 BOY HERMES! KOSTAS IS HAPPY.</div>
             <div class="final-score"
-                style="font-size: 16px; color: rgba(160, 160, 180, 0.8); letter-spacing: 2px; margin-bottom: 6px;">
+                style="font-size: 16px; color: rgba(160, 160, 180, 0.8); letter-spacing: 2px; margin-bottom: 10px;">
                 SCORE: <span id="win-score-val" style="color: #ffd32a;">0</span></div>
-            <button class="btn btn-primary" onclick="window.restartGame()" style="margin-top:20px;">PLAY AGAIN</button>
+                
+            <div id="win-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
+            
+            <div id="win-hs-input" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5); font-family: Orbitron, sans-serif;">NEW HIGH SCORE!</h3>
+                <p style="margin-bottom: 15px; font-weight: bold; color: #fff;">PLEASE ENTER YOUR INITIALS:</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="win-hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none; font-family: Orbitron;">
+                    <button class="btn btn-primary" id="win-hs-submit">SUBMIT</button>
+                </div>
+            </div>
+
+            <div id="win-buttons" style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" onclick="window.restartGame()">PLAY AGAIN</button>
+                <button class="btn btn-secondary" onclick="window.showMenu()">MAIN MENU</button>
+            </div>
         </div>
 
     </div>
@@ -90,7 +121,12 @@
         <img id="tilesImg" src="assets/tileset.png">
     </div>
 
-    <script src="game.js"></script>
+    <script type="module">
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'game.js?v=' + new Date().getTime();
+        document.body.appendChild(script);
+    </script>
 </body>
 
 </html>

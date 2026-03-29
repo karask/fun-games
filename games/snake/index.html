@@ -171,6 +171,7 @@
 
         <div id="start-screen" class="overlay">
             <h1 class="title">Neon Snake</h1>
+            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
             <div class="menu">
                 <button onclick="window.startGameMode(1)">1 Player</button>
                 <button onclick="window.startGameMode(2)">2 Players</button>
@@ -189,13 +190,25 @@
 
         <div id="game-over" class="overlay" style="display:none;">
             <h2 id="winner-text">GAME OVER</h2>
-            <button onclick="window.showMenu()">MAIN MENU</button>
+            <div id="game-over-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
+            
+            <div id="hs-input-section" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <h3 style="color:#fbc531; margin-bottom: 10px; text-shadow: 0 0 10px rgba(251, 197, 49, 0.5);">NEW HIGH SCORE!</h3>
+                <p style="margin-bottom: 15px; font-weight: bold;">PLEASE ENTER YOUR INITIALS:</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #fbc531; border: 2px solid #fbc531; border-radius: 4px; padding: 5px; outline: none;">
+                    <button id="hs-submit-btn">SUBMIT</button>
+                </div>
+            </div>
+
+            <button id="main-menu-btn" onclick="window.showMenu()">MAIN MENU</button>
         </div>
     </div>
 
     <!-- Added cache busting parameter to force fresh JS -->
     <script>
         const script = document.createElement('script');
+        script.type = 'module';
         script.src = 'game.js?v=' + new Date().getTime();
         document.body.appendChild(script);
     </script>

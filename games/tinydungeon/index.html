@@ -253,7 +253,26 @@
         <!-- Start/Death Screen -->
         <div id="start-screen" class="overlay">
             <h1 class="title">Tiny Dungeon</h1>
+            
+            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
+            
             <h2 id="death-msg" style="display:none; color: #e84118;">You have died!</h2>
+            <div id="end-score-display" style="display:none; color: #fbc531; font-size: 18px; margin-bottom: 10px;">End Score: <span id="final-score-val">0</span></div>
+            
+            <div id="end-leaderboard" style="display:none; margin-bottom: 20px; width: 300px;"></div>
+            
+            <div id="end-hs-input" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);">NEW HIGH SCORE!</h3>
+                <p style="margin-bottom: 15px; font-weight: bold; color: #fff;">PLEASE ENTER YOUR INITIALS:</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="end-hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none;">
+                    <button class="class-btn" id="end-hs-submit">SUBMIT</button>
+                </div>
+            </div>
+
+            <div id="end-button-container" style="display:none; margin-bottom: 20px;">
+                <button class="class-btn" onclick="window.backToMenu()">MAIN MENU</button>
+            </div>
             
             <div id="class-select">
                 <h3 style="text-align:center; color:#dcdde1;">Select Your Class</h3>
@@ -318,8 +337,9 @@
     </div>
 
     <!-- Force fresh JS -->
-    <script>
+    <script type="module">
         const script = document.createElement('script');
+        script.type = 'module';
         script.src = 'game.js?v=' + new Date().getTime();
         document.body.appendChild(script);
     </script>

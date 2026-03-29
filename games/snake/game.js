@@ -1,3 +1,5 @@
+import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const uiElement = document.getElementById('ui');
@@ -7,6 +9,12 @@ const scoreP2Box = document.getElementById('ui-p2');
 const gameOverElement = document.getElementById('game-over');
 const winnerTextElement = document.getElementById('winner-text');
 const startScreenElement = document.getElementById('start-screen');
+const startLeaderboardElement = document.getElementById('start-leaderboard');
+const gameOverLeaderboardElement = document.getElementById('game-over-leaderboard');
+const hsInputSection = document.getElementById('hs-input-section');
+const hsInitials = document.getElementById('hs-initials');
+const hsSubmitBtn = document.getElementById('hs-submit-btn');
+const mainMenuBtn = document.getElementById('main-menu-btn');
 
 const gridSize = 20;
 const tileCountX = canvas.width / gridSize;
@@ -47,7 +55,8 @@ function createPlayer(id, startX, startY, headColor, bodyColor) {
 }
 
 // Called from HTML buttons
-function startGameMode(mode) {
+// Called from HTML buttons
+window.startGameMode = function(mode) {
     gameMode = mode;
     startScreenElement.style.display = 'none';
     uiElement.style.display = 'flex';
@@ -59,18 +68,21 @@ function startGameMode(mode) {
     }
     
     initGame();
-}
+};
 
-function showMenu() {
+window.showMenu = function() {
     if (gameLoop) clearInterval(gameLoop);
     gameOverElement.style.display = 'none';
     uiElement.style.display = 'none';
     startScreenElement.style.display = 'flex';
     
+    // Refresh Start Screen Leaderboard
+    startLeaderboardElement.innerHTML = generateLeaderboardHTML('snake');
+    
     // Clear canvas
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
+};
 
 function initGame() {
     // Player 1 starts on the left. Player 2 (if present) uses Arrows, starts on the right.
@@ -358,10 +370,12 @@ function endGame() {
     gameOver = true;
     clearInterval(gameLoop);
     
+    let finalScore = 0;
     let winnerText = "GAME OVER";
     let color = '#ff4757';
     
     if (gameMode === 2) {
+        finalScore = Math.max(player1.score, player2.score);
         if (player1.dead && player2.dead) {
             winnerText = "IT'S A TIE!";
             color = '#fbc531';
@@ -373,12 +387,39 @@ function endGame() {
             color = '#4cd137';
         }
     } else {
+        finalScore = player1.score;
         winnerText = "SCORE: " + player1.score;
     }
     
     winnerTextElement.textContent = winnerText;
     winnerTextElement.style.color = color;
+    
+    // High Score logic
+    if (isHighScore('snake', finalScore)) {
+        mainMenuBtn.style.display = 'none';
+        gameOverLeaderboardElement.style.display = 'none';
+        hsInputSection.style.display = 'flex';
+        hsInitials.value = '';
+        
+        hsSubmitBtn.onclick = () => {
+            const initials = hsInitials.value.trim().toUpperCase().substring(0, 3);
+            if (initials.length > 0) {
+                saveHighScore('snake', initials, finalScore);
+                showPostGameLeaderboard();
+            }
+        };
+    } else {
+        showPostGameLeaderboard();
+    }
+    
     gameOverElement.style.display = 'flex';
+}
+
+function showPostGameLeaderboard() {
+    hsInputSection.style.display = 'none';
+    mainMenuBtn.style.display = 'block';
+    gameOverLeaderboardElement.style.display = 'block';
+    gameOverLeaderboardElement.innerHTML = generateLeaderboardHTML('snake');
 }
 
 function resetGame() {
@@ -454,3 +495,15 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 // Draw initial grid
 ctx.fillStyle = '#111';
 ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Setup Initials input handler
+hsInitials.addEventListener('keydown', (e) => {
+    // prevent default so space/arrows don't move the background game
+    e.stopPropagation(); 
+    if (e.key === 'Enter') {
+        hsSubmitBtn.click();
+    }
+});
+
+// Initial startup render
+startLeaderboardElement.innerHTML = generateLeaderboardHTML('snake');

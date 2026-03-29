@@ -1,3 +1,5 @@
+import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -252,9 +254,7 @@ function hitDog() {
     }
 
     if (lives <= 0) {
-        gameState = 'gameover';
-        document.getElementById('go-score-val').textContent = Math.floor(score);
-        screens.gameover.classList.remove('hidden');
+        handleGameEnd('gameover');
     }
 }
 
@@ -492,9 +492,7 @@ function update(dt) {
             if (dog.x < e.x + e.width && dog.x + dog.width > e.x &&
                 dog.y < e.y + e.height && dog.y + dog.height > e.y) {
                 if (dog.hasNewspaper) {
-                    gameState = 'victory';
-                    document.getElementById('win-score-val').textContent = Math.floor(score);
-                    screens.victory.classList.remove('hidden');
+                    handleGameEnd('victory');
                 }
             }
         }
@@ -833,21 +831,88 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
 }
 
+// End states handling
+function handleGameEnd(type) {
+    gameState = type; // gameover or victory
+    const finalScore = Math.floor(score);
+    
+    // UI mapping depending on win/loss
+    const prefix = type === 'victory' ? 'win' : 'go';
+    
+    document.getElementById(`${prefix}-score-val`).textContent = finalScore;
+    
+    const uiInputBtnContainerId = `${prefix}-buttons`;
+    const uiInputSectionId = `${prefix}-hs-input`;
+    const uiInitialsId = `${prefix}-hs-initials`;
+    const uiSubmitId = `${prefix}-hs-submit`;
+    const uiLeaderboardId = `${prefix}-leaderboard`;
+    
+    // Add enter listener if not present
+    const inputEl = document.getElementById(uiInitialsId);
+    if (!inputEl.dataset.listener) {
+        inputEl.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') document.getElementById(uiSubmitId).click();
+        });
+        inputEl.dataset.listener = 'true';
+    }
+    
+    if (isHighScore('neondog', finalScore)) {
+        document.getElementById(uiInputBtnContainerId).style.display = 'none';
+        document.getElementById(uiLeaderboardId).style.display = 'none';
+        document.getElementById(uiInputSectionId).style.display = 'flex';
+        inputEl.value = '';
+        
+        document.getElementById(uiSubmitId).onclick = () => {
+            const initials = inputEl.value.trim().toUpperCase().substring(0, 3);
+            if (initials.length > 0) {
+                saveHighScore('neondog', initials, finalScore);
+                document.getElementById(uiInputSectionId).style.display = 'none';
+                document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+                document.getElementById(uiLeaderboardId).style.display = 'block';
+                document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('neondog');
+            }
+        };
+    } else {
+        document.getElementById(uiInputBtnContainerId).style.display = 'flex';
+        document.getElementById(uiInputSectionId).style.display = 'none';
+        document.getElementById(uiLeaderboardId).style.display = 'block';
+        document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('neondog');
+    }
+    
+    screens[type].classList.remove('hidden');
+}
+
+
 // Controls
-function startGame() {
+window.startGame = function() {
     screens.start.classList.add('hidden');
     initGame();
     gameState = 'playing';
-}
+};
 
-function restartGame() {
+window.restartGame = function() {
     screens.gameover.classList.add('hidden');
     screens.victory.classList.add('hidden');
     initGame();
     gameState = 'playing';
-}
+};
 
-// Start Loop
+window.showMenu = function() {
+    screens.gameover.classList.add('hidden');
+    screens.victory.classList.add('hidden');
+    screens.start.classList.remove('hidden');
+    gameState = 'start';
+    const sl = document.getElementById('start-leaderboard');
+    if (sl) sl.innerHTML = generateLeaderboardHTML('neondog');
+    score = 0;
+    uiScore.textContent = '0m';
+};
+
+// Start Loop setup
+const sl = document.getElementById('start-leaderboard');
+if (sl) sl.innerHTML = generateLeaderboardHTML('neondog');
+
 requestAnimationFrame((timestamp) => {
     lastTime = timestamp;
     gameLoop(timestamp);

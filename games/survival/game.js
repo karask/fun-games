@@ -1,3 +1,5 @@
+import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('score-val');
@@ -5,6 +7,13 @@ const levelElement = document.getElementById('level-val');
 const healthElement = document.getElementById('health-val');
 const gameOverElement = document.getElementById('game-over');
 const finalScoreElement = document.getElementById('final-score');
+const startScreenElement = document.getElementById('start-screen');
+const startLeaderboardElement = document.getElementById('start-leaderboard');
+const gameOverLeaderboardElement = document.getElementById('game-over-leaderboard');
+const hsInputSection = document.getElementById('hs-input-section');
+const hsInitials = document.getElementById('hs-initials');
+const hsSubmitBtn = document.getElementById('hs-submit-btn');
+const mainMenuBtn = document.getElementById('main-menu-btn');
 
 // Game State
 let gameStarted = false;
@@ -77,10 +86,23 @@ function initGame() {
 }
 
 function startGame() {
+    startScreenElement.style.display = 'none';
+    initGame();
     gameStarted = true;
 }
+window.startGame = startGame;
 
-window.resetGame = initGame; // Make globally accessible for HTML button
+function showMenu() {
+    gameStarted = false;
+    gameOverElement.style.display = 'none';
+    startScreenElement.style.display = 'flex';
+    startLeaderboardElement.innerHTML = generateLeaderboardHTML('survival');
+
+    // Clear canvas
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+window.showMenu = showMenu;
 
 function updateUI() {
     scoreElement.textContent = score;
@@ -101,10 +123,6 @@ function gameLoop(timestamp) {
     }
 
     draw();
-
-    if (!gameStarted) {
-        drawStartScreen();
-    }
 
     animationId = requestAnimationFrame(gameLoop);
 }
@@ -400,7 +418,33 @@ function checkLevelUp() {
 function triggerGameOver() {
     gameOver = true;
     finalScoreElement.textContent = 'Score: ' + score;
+
+    // High Score logic
+    if (isHighScore('survival', score)) {
+        mainMenuBtn.style.display = 'none';
+        gameOverLeaderboardElement.style.display = 'none';
+        hsInputSection.style.display = 'flex';
+        hsInitials.value = '';
+
+        hsSubmitBtn.onclick = () => {
+            const initials = hsInitials.value.trim().toUpperCase().substring(0, 3);
+            if (initials.length > 0) {
+                saveHighScore('survival', initials, score);
+                showPostGameLeaderboard();
+            }
+        };
+    } else {
+        showPostGameLeaderboard();
+    }
+
     gameOverElement.style.display = 'flex';
+}
+
+function showPostGameLeaderboard() {
+    hsInputSection.style.display = 'none';
+    mainMenuBtn.style.display = 'block';
+    gameOverLeaderboardElement.style.display = 'block';
+    gameOverLeaderboardElement.innerHTML = generateLeaderboardHTML('survival');
 }
 
 // ---------------------------
@@ -536,18 +580,18 @@ function draw() {
 
     // Glowing Neon Rings Spaceship
     let pColor = player.color;
-    
+
     // Outer glow base
     ctx.shadowBlur = 20;
     ctx.shadowColor = pColor;
-    
+
     // Outer thick ring
     ctx.lineWidth = 3;
     ctx.strokeStyle = pColor;
     ctx.beginPath();
     ctx.arc(0, 0, player.size * 1.5, 0, Math.PI * 2);
     ctx.stroke();
-    
+
     // Middle ring with dots
     ctx.fillStyle = pColor;
     ctx.shadowBlur = 10;
@@ -559,30 +603,30 @@ function draw() {
         ctx.arc(Math.cos(a) * dotRadius, Math.sin(a) * dotRadius, player.size * 0.25, 0, Math.PI * 2);
         ctx.fill();
     }
-    
+
     // Inner thin solid ring
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.arc(0, 0, player.size * 0.75, 0, Math.PI * 2);
     ctx.stroke();
-    
+
     // Dark Core
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#020612';
     ctx.beginPath();
     ctx.arc(0, 0, player.size * 0.65, 0, Math.PI * 2);
     ctx.fill();
-    
+
     // Sphere highlight on the dark core
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.arc(0, 0, player.size * 0.45, Math.PI + Math.PI/4, Math.PI + Math.PI/1.8);
+    ctx.arc(0, 0, player.size * 0.45, Math.PI + Math.PI / 4, Math.PI + Math.PI / 1.8);
     ctx.stroke();
-    
+
     ctx.beginPath();
-    ctx.arc(0, 0, player.size * 0.45, Math.PI + Math.PI/1.5, Math.PI + Math.PI/1.5 + 0.2);
+    ctx.arc(0, 0, player.size * 0.45, Math.PI + Math.PI / 1.5, Math.PI + Math.PI / 1.5 + 0.2);
     ctx.stroke();
 
     // Draw active powerup indicators
@@ -598,23 +642,6 @@ function draw() {
     }
 
     ctx.restore();
-}
-
-function drawStartScreen() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = '#00d2d3';
-    ctx.font = 'bold 30px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#00d2d3';
-    ctx.fillText('PRESS SPACE TO START', canvas.width / 2, canvas.height / 2 - 20);
-
-    ctx.font = '16px Inter, sans-serif';
-    ctx.fillStyle = '#ccc';
-    ctx.shadowBlur = 0;
-    ctx.fillText('WASD / Arrows to Move | Space to shoot (Auto-targets!)', canvas.width / 2, canvas.height / 2 + 30);
 }
 
 // ---------------------------
@@ -658,5 +685,18 @@ window.addEventListener('keyup', (e) => {
     if (e.code === 'Space') keys.Space = false;
 });
 
-// Start initially
-initGame();
+// Setup Initial Screen
+startLeaderboardElement.innerHTML = generateLeaderboardHTML('survival');
+
+// Setup Initials input handler
+hsInitials.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+        hsSubmitBtn.click();
+    }
+});
+
+// Start loop but don't play
+if (animationId) cancelAnimationFrame(animationId);
+lastTime = performance.now();
+gameLoop(lastTime);
