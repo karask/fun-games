@@ -181,11 +181,14 @@ function update(dt) {
 
         // Check collision with player
         if (dist < player.size + e.size) {
-            player.health -= e.damage * dt * 5; // take steady damage if touching
+            player.health -= e.damage; // take instant damage
             updateUI();
+            createParticles(e.x, e.y, e.color, 20); // asteroid explosion
+            enemies.splice(i, 1); // asteroid destroyed on impact
             if (player.health <= 0) {
                 triggerGameOver();
             }
+            continue; // skip other updates for this enemy
         }
 
         // Check collision with bullets
@@ -208,8 +211,9 @@ function update(dt) {
                     checkLevelUp();
                     updateUI();
 
-                    // Drop chance
-                    if (Math.random() < 0.1) spawnPowerup(e.x, e.y);
+                    // Drop chance - increases with difficulty (level)
+                    let dropChance = 0.1 + (level * 0.03); // Base 13% at lvl 1, +3% per level
+                    if (Math.random() < Math.min(0.5, dropChance)) spawnPowerup(e.x, e.y);
 
                     enemies.splice(i, 1);
                     break;
