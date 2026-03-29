@@ -100,11 +100,11 @@ const LEVEL_DATA = [
     {
         rows: [
             'uuuuuuuuuu',
-            'u1234567u7',
-            'u.......uu',
-            'u.ss..ssu.',
-            'u.......uu',
-            'uuuuuuuuuu',
+            'u123456765',
+            'u........u',
+            'u.ss..ss.u',
+            'u........u',
+            'ssssssssss',
         ],
         ballSpeed: 7.2, paddleW: 102, powerupFreq: 0.25
     },
@@ -240,7 +240,7 @@ const LEVEL_DATA = [
             'x2x2x2x2x2',
             '2x2x2x2x2x',
             'ssssssssss',
-            'uuuuuuuuuu',
+            '..uuuuuu..',
         ],
         ballSpeed: 7.8, paddleW: 86, powerupFreq: 0.32
     },
@@ -265,7 +265,7 @@ const LEVEL_DATA = [
             '1s3s5s7s1s',
             's2s4s6s1s3',
             'ssssssssss',
-            'uuuuuuuuuu',
+            'ususususus',
         ],
         ballSpeed: 8.3, paddleW: 84, powerupFreq: 0.33
     },
@@ -278,7 +278,7 @@ const LEVEL_DATA = [
             'uss1s1s1su',
             'us1s1s1ssu',
             'ussssssssu',
-            'uuuuuuuuuu',
+            'ssuu..uuss',
         ],
         ballSpeed: 8.6, paddleW: 82, powerupFreq: 0.35
     },
