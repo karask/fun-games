@@ -59,6 +59,21 @@ body {
     text-shadow: 0 0 12px rgba(0, 210, 211, 0.8);
 }
 
+#health, #news-hud {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#news-hud {
+    gap: 8px;
+}
+
+#news-status {
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
 #score-val {
     color: #ffd32a;
     text-shadow: 0 0 12px rgba(255, 211, 42, 0.8);

@@ -37,7 +37,7 @@ const games = [
     },
     {
         id: 'neondog',
-        title: 'Neon Dog Platformer',
+        title: 'Neon Dog',
         genre: 'Platformer',
         thumb: 'assets/neondog_thumb.png',
         url: 'games/neondog/index.html'
@@ -53,7 +53,7 @@ const currentGameTitle = document.getElementById('current-game-title');
 // Initialize App
 function init() {
     renderGameList();
-    
+
     // Handle iframe load event for smooth appearance
     gameFrame.addEventListener('load', () => {
         if (gameFrame.src && gameFrame.src !== window.location.href && gameFrame.src !== 'about:blank') {
@@ -66,12 +66,12 @@ function init() {
 // Render dynamic game list in sidebar
 function renderGameList() {
     gameListEl.innerHTML = '';
-    
+
     games.forEach(game => {
         const card = document.createElement('div');
         card.className = 'game-card';
         card.dataset.id = game.id;
-        
+
         card.innerHTML = `
             <img src="${game.thumb}" alt="${game.title}" class="game-thumb">
             <div class="game-info">
@@ -79,7 +79,7 @@ function renderGameList() {
                 <span class="game-genre">${game.genre}</span>
             </div>
         `;
-        
+
         card.addEventListener('click', () => selectGame(game));
         gameListEl.appendChild(card);
     });
@@ -94,17 +94,17 @@ function selectGame(game) {
             el.classList.add('active');
         }
     });
-    
+
     // Update UI headers
     currentGameTitle.textContent = game.title;
-    
+
     // Switch views
     emptyState.style.display = 'none';
-    
+
     // Load game (smooth transition reset)
     gameFrame.classList.remove('loaded');
     gameFrame.style.display = 'block';
-    
+
     // Slight delay before changing src ensures the fade-out effect
     setTimeout(() => {
         gameFrame.src = game.url;
