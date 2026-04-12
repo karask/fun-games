@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Shattered Crown</title>
+    <meta name="description" content="An epic fantasy text adventure in the style of classic Level 9 Computing games">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* ══════════════════════════════════════════════
+           THE SHATTERED CROWN — Fantasy UI Styles
+           ══════════════════════════════════════════════ */
+
+        :root {
+            --bg-deep: #0d0b08;
+            --bg-dark: #1a1510;
+            --bg-surface: #231e16;
+            --bg-surface-light: #2e2820;
+            --bg-panel: rgba(35, 30, 22, 0.95);
+
+            --gold: #d4a847;
+            --gold-bright: #f0c96c;
+            --gold-dim: #9e7a2f;
+            --gold-glow: rgba(212, 168, 71, 0.3);
+
+            --amber: #c47b2b;
+            --text-primary: #e8dcc8;
+            --text-secondary: #a89878;
+            --text-narrative: #d6cab4;
+            --text-dim: #706050;
+
+            --red-dark: #8b3a3a;
+            --red-glow: rgba(180, 60, 60, 0.4);
+            --green-shard: #5aad6a;
+            --blue-magic: #5a8aad;
+
+            --border: rgba(212, 168, 71, 0.15);
+            --border-strong: rgba(212, 168, 71, 0.3);
+
+            --font-heading: 'Cinzel', serif;
+            --font-body: 'Crimson Text', Georgia, serif;
+
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Parchment Texture Overlay ─────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(212, 168, 71, 0.05) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(180, 120, 40, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Intro Screen ──────────────────────────── */
+        #intro-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-deep);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 2rem;
+        }
+
+        .intro-title {
+            font-family: var(--font-heading);
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 800;
+            color: var(--gold);
+            text-shadow: 0 0 30px var(--gold-glow), 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .intro-subtitle {
+            font-family: var(--font-body);
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-bottom: 2rem;
+        }
+
+        .intro-ornament {
+            color: var(--gold-dim);
+            font-size: 1.4rem;
+            letter-spacing: 8px;
+            margin-bottom: 2rem;
+        }
+
+        #intro-text {
+            max-width: 700px;
+            width: 100%;
+            max-height: 50vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text-narrative);
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold-dim) transparent;
+        }
+
+        #intro-text .narrative-line {
+            margin-bottom: 0.8rem;
+        }
+
+        #start-btn {
+            display: none;
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 14px 40px;
+            background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+            color: var(--bg-deep);
+            border: 2px solid var(--gold);
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: var(--transition);
+        }
+
+        #start-btn:hover {
+            background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+            box-shadow: 0 0 30px var(--gold-glow);
+            transform: translateY(-2px);
+        }
+
+        /* ── Main Game UI ──────────────────────────── */
+        #game-ui {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* ── Top Bar ───────────────────────────────── */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: linear-gradient(to bottom, var(--bg-surface), transparent);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .game-title-bar {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gold);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px var(--gold-glow);
+        }
+
+        .shard-tracker {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-heading);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .shard-tracker-label {
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        #shard-gems {
+            display: flex;
+            gap: 4px;
+        }
+
+        .shard-gem {
+            font-size: 1rem;
+            color: var(--text-dim);
+            transition: var(--transition);
+        }
+
+        .shard-gem.collected {
+            color: var(--gold-bright);
+            text-shadow: 0 0 8px var(--gold-glow);
+            animation: gemPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes gemPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* ── Narrative Panel ───────────────────────── */
+        .narrative-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 0 16px;
+        }
+
+        #location-title {
+            font-family: var(--font-heading);
+            font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+            font-weight: 700;
+            color: var(--gold);
+            text-align: center;
+            padding: 16px 0 8px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px var(--gold-glow);
+            flex-shrink: 0;
+        }
+
+        .title-ornament {
+            text-align: center;
+            color: var(--gold-dim);
+            font-size: 0.8rem;
+            letter-spacing: 6px;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        #narrative {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 20px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1.05rem;
+            line-height: 1.75;
+            color: var(--text-narrative);
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold-dim) transparent;
+        }
+
+        #narrative::-webkit-scrollbar {
+            width: 6px;
+        }
+        #narrative::-webkit-scrollbar-thumb {
+            background: var(--gold-dim);
+            border-radius: 10px;
+        }
+
+        .narrative-line {
+            margin-bottom: 0.7rem;
+            opacity: 0;
+            transform: translateY(5px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .narrative-line.visible,
+        .narrative-line.intro-line {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .narrative-line.room-desc {
+            color: var(--text-narrative);
+        }
+
+        .narrative-line.pickup {
+            color: var(--green-shard);
+            font-style: italic;
+        }
+
+        .narrative-line.examine,
+        .narrative-line.read {
+            color: var(--blue-magic);
+        }
+
+        .narrative-line.npc-dialogue {
+            color: var(--gold-bright);
+            padding-left: 12px;
+            border-left: 2px solid var(--gold-dim);
+        }
+
+        .narrative-line.action {
+            color: var(--amber);
+            font-weight: 600;
+        }
+
+        .narrative-line.special {
+            color: var(--gold);
+            font-weight: 600;
+            text-shadow: 0 0 8px var(--gold-glow);
+        }
+
+        /* ── Command Panel (Bottom) ────────────────── */
+        .command-panel {
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border-strong);
+            padding: 10px 16px 12px;
+        }
+
+        /* Command Builder Line */
+        #command-line {
+            font-family: var(--font-heading);
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 6px 16px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            letter-spacing: 1px;
+            min-height: 32px;
+            transition: var(--transition);
+        }
+
+        #command-line.active {
+            color: var(--gold-bright);
+            border-color: var(--gold-dim);
+            background: rgba(212, 168, 71, 0.08);
+            text-shadow: 0 0 8px var(--gold-glow);
+        }
+
+        /* Verb Grid */
+        #verb-grid {
+            margin-bottom: 8px;
+        }
+
+        .verb-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Compass Area: compass grid + up/down stack */
+        .compass-area {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .compass-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            width: fit-content;
+        }
+
+        .compass-empty {
+            width: 82px;
+            height: 46px;
+        }
+
+        .ud-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* Vertical separator between compass and actions */
+        .verb-separator-v {
+            width: 1px;
+            align-self: stretch;
+            background: var(--border-strong);
+            flex-shrink: 0;
+            margin: 0 6px;
+        }
+
+        /* Action buttons grid */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+
+        .verb-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 8px 10px;
+            width: 82px;
+            height: 46px;
+            background: linear-gradient(180deg, var(--bg-surface-light), var(--bg-dark));
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: var(--font-heading);
+        }
+
+        .verb-btn:hover {
+            background: linear-gradient(180deg, rgba(212, 168, 71, 0.15), var(--bg-surface-light));
+            border-color: var(--gold-dim);
+            color: var(--gold);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 8px var(--gold-glow);
+        }
+
+        .verb-btn.active {
+            background: linear-gradient(180deg, rgba(212, 168, 71, 0.2), var(--bg-surface-light));
+            border-color: var(--gold);
+            color: var(--gold-bright);
+            box-shadow: 0 0 15px var(--gold-glow);
+        }
+
+        .verb-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .verb-icon {
+            font-size: 1.1rem;
+        }
+
+        .verb-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Target Panel */
+        #target-panel {
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 0;
+            justify-content: center;
+            min-height: 30px;
+        }
+
+        .target-btn {
+            padding: 6px 14px;
+            background: rgba(90, 138, 173, 0.15);
+            border: 1px solid rgba(90, 138, 173, 0.4);
+            border-radius: 20px;
+            color: var(--blue-magic);
+            cursor: pointer;
+            font-family: var(--font-heading);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: var(--transition);
+        }
+
+        .target-btn:hover {
+            background: rgba(90, 138, 173, 0.25);
+            border-color: var(--blue-magic);
+            color: #8cc4e8;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(90, 138, 173, 0.3);
+        }
+
+        .target-empty {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 0.85rem;
+            padding: 6px;
+        }
+
+        /* Inventory Bar */
+        .inventory-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0 0;
+            border-top: 1px solid var(--border);
+            min-height: 38px;
+            flex-wrap: wrap;
+        }
+
+        .inventory-label {
+            font-family: var(--font-heading);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        #inventory-items {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .inventory-chip {
+            padding: 4px 12px;
+            background: rgba(212, 168, 71, 0.1);
+            border: 1px solid var(--gold-dim);
+            border-radius: 16px;
+            color: var(--gold);
+            cursor: pointer;
+            font-family: var(--font-heading);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: var(--transition);
+        }
+
+        .inventory-chip:hover {
+            background: rgba(212, 168, 71, 0.2);
+            border-color: var(--gold-bright);
+            box-shadow: 0 0 8px var(--gold-glow);
+        }
+
+        .inventory-chip.shard-chip {
+            background: rgba(212, 168, 71, 0.15);
+            border-color: var(--gold);
+            animation: shardPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes shardPulse {
+            0%, 100% { box-shadow: 0 0 4px var(--gold-glow); }
+            50% { box-shadow: 0 0 12px var(--gold-glow); }
+        }
+
+        /* Replay Button */
+        .replay-btn {
+            display: block;
+            margin: 2rem auto;
+            padding: 14px 40px;
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+            color: var(--bg-deep);
+            border: 2px solid var(--gold);
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: var(--transition);
+        }
+
+        .replay-btn:hover {
+            background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+            box-shadow: 0 0 30px var(--gold-glow);
+            transform: translateY(-2px);
+        }
+
+        /* Pulse Glow Animation */
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px var(--gold-glow); }
+            50% { box-shadow: 0 0 25px var(--gold-glow), 0 0 40px rgba(212, 168, 71, 0.15); }
+        }
+
+        /* ── Responsive ────────────────────────────── */
+        @media (max-width: 600px) {
+            .verb-btn {
+                width: 60px;
+                height: 38px;
+                padding: 5px 6px;
+            }
+            .compass-empty {
+                width: 60px;
+                height: 38px;
+            }
+            .verb-icon {
+                font-size: 0.9rem;
+            }
+            .verb-label {
+                font-size: 0.55rem;
+            }
+            #narrative {
+                font-size: 0.95rem;
+                padding: 10px 14px;
+            }
+            .inventory-chip {
+                font-size: 0.6rem;
+                padding: 3px 8px;
+            }
+            .verb-container {
+                gap: 6px;
+            }
+            .verb-separator-v {
+                margin: 0 2px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ══ Intro Screen ══ -->
+    <div id="intro-screen">
+        <h1 class="intro-title">The Shattered Crown</h1>
+        <p class="intro-subtitle">A Text Adventure</p>
+        <div class="intro-ornament">✦ ─── ✦ ─── ✦</div>
+        <div id="intro-text"></div>
+        <button id="start-btn">Begin Your Quest</button>
+    </div>
+
+    <!-- ══ Game UI ══ -->
+    <div id="game-ui">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <span class="game-title-bar">⚔ The Shattered Crown</span>
+            <div class="shard-tracker">
+                <span class="shard-tracker-label">Shards:</span>
+                <span id="shard-gems"></span>
+                <span id="shard-count">0 / 5</span>
+            </div>
+        </div>
+
+        <!-- Narrative Area -->
+        <div class="narrative-panel">
+            <h2 id="location-title">...</h2>
+            <div class="title-ornament">── ✦ ──</div>
+            <div id="narrative"></div>
+        </div>
+
+        <!-- Command Panel -->
+        <div class="command-panel">
+            <div id="command-line">Choose a command...</div>
+            <div id="target-panel"></div>
+            <div id="verb-grid"></div>
+            <div class="inventory-bar">
+                <span class="inventory-label">Pack:</span>
+                <div id="inventory-items"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'game.js?v=' + new Date().getTime();
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>

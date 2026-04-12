@@ -43,6 +43,13 @@ const games = [
         genre: 'Platformer',
         thumb: 'assets/neondog_thumb.png',
         url: 'games/neondog/index.html'
+    },
+    {
+        id: 'textadventure',
+        title: 'The Shattered Crown',
+        genre: 'Text Adventure',
+        thumb: 'assets/textadventure_thumb.png',
+        url: 'games/textadventure/index.html'
     }
 ];
 
