@@ -365,11 +365,11 @@ export const rooms = {
         id: 'great_hall',
         title: 'Great Hall',
         region: 'The Dark Citadel',
-        description: "A vast hall of dark stone stretches before you. Tattered banners hang from the ceiling — and with a jolt, you recognise the symbol on them. It is YOUR rune. The one on your wrist.\n\nA long table is set for a feast that never happened. Dust covers everything. Cobwebs veil the chandeliers.\n\nAt the far end of the hall, ALDRIC stands waiting. He is no longer stooped. His eyes no longer kind. He is clapping — slowly, deliberately.\n\nThe Citadel Gate lies to the NORTH. The THRONE ROOM lies to the SOUTH.",
+        description: "A vast hall of dark stone stretches before you. Tattered banners hang from the ceiling — and with a jolt, you recognise the symbol on them. It is YOUR rune. The one on your wrist.\n\nA long table is set for a feast that never happened. Dust covers everything. Cobwebs veil the chandeliers. The hall is silent and empty, save for the echoes of your own footsteps.\n\nThe Citadel Gate lies to the NORTH. The THRONE ROOM lies to the SOUTH.",
         exits: { north: 'citadel_gate', south: 'throne_room' },
         items: [],
         objects: ['banners', 'feast_table'],
-        npcs: ['aldric_reveal'],
+        npcs: [],
         examine: {
             banners: "The banners bear your rune — not a family crest, not a guild mark, but Malachar's personal sigil. YOU are Malachar. The banners are yours. This hall is yours. This citadel is yours.",
             feast_table: "A long oak table set with silver plates, crystal goblets, and tarnished candlesticks. Enough place settings for a dozen people. A celebration that was never held — for a victory that was never completed.",
@@ -549,12 +549,7 @@ export const npcs = {
         talkDefault: "Yarrow looks up from her cauldron and freezes. The colour drains from her face.\n\n\"That face. I know that face.\" Her voice is barely a whisper. \"I saw it in the flames when my village burned. I saw it in my nightmares for years after.\"\n\nShe stands abruptly, knocking over a jar of dried beetles.\n\n\"Whatever Aldric told you — WHATEVER he told you — the Crown is not what you think. It was never meant to protect. It was forged to dominate. To channel dark power.\"\n\nShe grabs your arm, her grip surprisingly strong.\n\n\"Destroy it. Please. DESTROY IT. Take my compass, take my shield — take anything. But do not reassemble that Crown.\"\n\nShe releases you, trembling. \"I know you don't remember. But I do. And I would rather help my enemy than see that Crown made whole again.\"",
         talkAfter: "Yarrow stirs her cauldron in silence. She doesn't look at you. \"I've said what I needed to say. The choice is yours now.\"",
     },
-    aldric_reveal: {
-        id: 'aldric_reveal',
-        name: 'Aldric',
-        room: 'great_hall',
-        talkDefault: "Aldric stops clapping. His smile is cold, triumphant.\n\n\"Did you truly never wonder, my Lord Malachar? The rune on your wrist. The gates that opened at your approach. The banners that bear your sigil.\"\n\nHe begins to pace, speaking as though delivering a lecture.\n\n\"You shattered the Crown. I designed the ritual — and I designed its flaw. Your memory was the price. Not an accident. MY work. A fully empowered Malachar was dangerous... unpredictable. But an amnesiac one? Obedient. Eager. Heroic, even.\"\n\nHe laughs.\n\n\"The shards are blood-bound to you. Only YOU can touch them. Only YOU can place them in the frame. I needed you — compliant and motivated — to do what I could not.\"\n\nHe gestures toward the throne room.\n\n\"Go on. Reassemble the Crown. You've earned that much. And once it's whole...\" He smiles. \"Well. We'll see who wears it, won't we?\"",
-    },
+
     aldric_throne: {
         id: 'aldric_throne',
         name: 'Aldric',
