@@ -10,6 +10,10 @@ import {
     SHARD_IDS, TOTAL_SHARDS,
 } from './data.js';
 
+import { 
+    isHighScore, saveHighScore, generateLeaderboardHTML 
+} from '../../assets/highscore.js';
+
 // ── Game State ────────────────────────────────────────────────
 
 const state = {
@@ -814,7 +818,7 @@ function handleCrownAssembly() {
 
 // ── Endings ───────────────────────────────────────────────────
 
-function triggerEnding(type) {
+export function triggerEnding(type) {
     state.gameEnded = true;
     clearNarrative();
 
@@ -851,14 +855,72 @@ function triggerEnding(type) {
     commandLineEl.classList.remove('active');
 
     typewriteLines(narrativeEl, lines, 0, () => {
-        // Show replay button
-        const replayBtn = document.createElement('button');
-        replayBtn.className = 'replay-btn pulse-glow';
-        replayBtn.textContent = '↻ Play Again';
-        replayBtn.addEventListener('click', () => {
-            location.reload();
-        });
-        narrativeEl.appendChild(replayBtn);
+        // Calculate score
+        let score = 0;
+        if (type === 'true') score = 3;
+        if (type === 'domination') score = 2;
+        if (type === 'dark') score = 1;
+
+        // Show Score
+        addNarrative(`\nFINAL SCORE: ${score} points`, 'special');
+
+        // High Score Logic
+        if (isHighScore('textadventure', score)) {
+            showHighScoreInput(score);
+        } else {
+            showLeaderboard();
+        }
+    });
+}
+
+function showHighScoreInput(score) {
+    const section = document.createElement('div');
+    section.className = 'hs-section';
+    section.innerHTML = `
+        <div class="hs-title">A Legendary Achievement!</div>
+        <p style="margin-bottom: 1rem; color: var(--text-secondary);">Your journey has been recorded in the annals of Aethermoor.</p>
+        <div class="hs-input-group">
+            <input type="text" class="hs-input" id="hs-initials" maxlength="3" placeholder="---">
+            <button class="hs-btn" id="hs-submit">Save Score</button>
+        </div>
+    `;
+    narrativeEl.appendChild(section);
+    narrativeEl.scrollTop = narrativeEl.scrollHeight;
+
+    const input = document.getElementById('hs-initials');
+    const submit = document.getElementById('hs-submit');
+
+    input.focus();
+
+    const onSubmit = () => {
+        const initials = input.value.trim().toUpperCase() || '???';
+        saveHighScore('textadventure', initials, score);
+        section.remove();
+        showLeaderboard();
+    };
+
+    submit.addEventListener('click', onSubmit);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') onSubmit();
+    });
+}
+
+function showLeaderboard() {
+    const container = document.createElement('div');
+    container.className = 'hs-section';
+    container.innerHTML = `
+        <div class="hs-title">Hall of Heroes</div>
+        <div class="leaderboard-container">
+            ${generateLeaderboardHTML('textadventure')}
+        </div>
+        <button class="replay-btn pulse-glow" style="margin-top: 1.5rem;">↻ Play Again</button>
+    `;
+    narrativeEl.appendChild(container);
+    narrativeEl.scrollTop = narrativeEl.scrollHeight;
+
+    const replayBtn = container.querySelector('.replay-btn');
+    replayBtn.addEventListener('click', () => {
+        location.reload();
     });
 }
 

@@ -587,6 +587,84 @@
             50% { box-shadow: 0 0 25px var(--gold-glow), 0 0 40px rgba(212, 168, 71, 0.15); }
         }
 
+        /* ── High Scores & Leaderboard ──────────────── */
+        .hs-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px double var(--gold-dim);
+            border-radius: 8px;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+
+        .hs-title {
+            font-family: var(--font-heading);
+            color: var(--gold-bright);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hs-input-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .hs-input {
+            width: 80px;
+            padding: 8px;
+            background: var(--bg-deep);
+            border: 1px solid var(--gold-dim);
+            border-radius: 4px;
+            color: var(--gold-bright);
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+        }
+
+        .hs-input:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 10px var(--gold-glow);
+        }
+
+        .hs-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+            border: 1px solid var(--gold);
+            border-radius: 4px;
+            color: var(--bg-deep);
+            font-family: var(--font-heading);
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .hs-btn:hover {
+            background: var(--gold-bright);
+            box-shadow: 0 0 15px var(--gold-glow);
+            transform: translateY(-1px);
+        }
+
+        .leaderboard-container {
+            margin-top: 1rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* ── Responsive ────────────────────────────── */
         @media (max-width: 600px) {
             .verb-btn {
