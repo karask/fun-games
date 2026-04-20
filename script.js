@@ -50,6 +50,13 @@ const games = [
         genre: 'Text Adventure',
         thumb: 'assets/textadventure_thumb.png',
         url: 'games/textadventure/index.html'
+    },
+    {
+        id: 'towerdefense',
+        title: 'Kingdom Defense',
+        genre: 'Tower Defense',
+        thumb: 'assets/towerdefense_thumb.png',
+        url: 'games/towerdefense/index.html'
     }
 ];
 
