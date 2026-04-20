@@ -69,9 +69,9 @@ const MONSTER_DEFS = {
 };
 
 const BOSS_DEFS = {
-  dragon: { name: 'Ancient Dragon', hp: 4500, speed: 55, reward: 200, armor: 15, dodge: 0, regen: 0, scale: 2.8, immune: { slow: true, freeze: true }, desc: 'Immune to Slow & Freeze' },
-  lichking: { name: 'Lich King', hp: 4500, speed: 50, reward: 200, armor: 5, dodge: 0.1, regen: 5, scale: 2.6, immune: { burn: true }, desc: 'Immune to Burn — summons minions' },
-  demonlord: { name: 'Demon Lord', hp: 4000, speed: 60, reward: 200, armor: 10, dodge: 0.05, regen: 0, scale: 2.7, immune: { freeze: true }, desc: 'Immune to Freeze — enrages when hurt' },
+  dragon: { name: 'Ancient Dragon', hp: 7500, speed: 55, reward: 600, armor: 15, dodge: 0, regen: 0, scale: 2.8, immune: { slow: true, freeze: true }, desc: 'Immune to Slow & Freeze' },
+  lichking: { name: 'Lich King', hp: 7500, speed: 50, reward: 500, armor: 5, dodge: 0.1, regen: 5, scale: 2.6, immune: { burn: true }, desc: 'Immune to Burn — summons minions' },
+  demonlord: { name: 'Demon Lord', hp: 7000, speed: 60, reward: 500, armor: 10, dodge: 0.05, regen: 0, scale: 2.7, immune: { freeze: true }, speedBonus: 15, desc: 'Immune to Freeze — grows faster as HP drops' },
 };
 
 // ── Drawing helpers ────────────────────────────────────────────────────────
