@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slime Tales</title>
+    <meta name="description" content="Slime Tales - A gooey platformer adventure with cute slime characters, hazards, and 30 levels of fun!">
+    <script>
+        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+            const base = document.createElement('base');
+            base.href = window.location.pathname + '/';
+            document.head.appendChild(base);
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="560"></canvas>
+
+        <!-- ═══ Menu Overlay ═══ -->
+        <div class="overlay" id="menu-overlay">
+            <div class="game-title">SLIME TALES</div>
+            <div class="game-subtitle">A Gooey Adventure</div>
+            <div class="menu-buttons">
+                <button class="btn btn-primary" id="btn-1p" onclick="window.selectPlayers(1)">1 Player</button>
+                <button class="btn btn-blue" id="btn-2p" onclick="window.selectPlayers(2)">2 Players</button>
+            </div>
+            <div class="controls-info">
+                <div class="ctrl-group">
+                    <div class="ctrl-label">Player 1</div>
+                    <div class="ctrl-keys">Arrow Keys</div>
+                </div>
+                <div class="ctrl-group">
+                    <div class="ctrl-label">Player 2</div>
+                    <div class="ctrl-keys">W A S D</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Level Select Overlay ═══ -->
+        <div class="overlay hidden" id="level-select-overlay">
+            <div class="level-select-title">SELECT LEVEL</div>
+            <div id="level-grid"></div>
+            <button class="btn btn-secondary" onclick="window.goToMenu()">← Back</button>
+        </div>
+
+        <!-- ═══ Game Over Overlay ═══ -->
+        <div class="overlay gameover-overlay hidden" id="game-over-overlay">
+            <div class="gameover-title">POP!</div>
+            <div class="gameover-subtitle">Your slime has popped...</div>
+            <div class="gameover-buttons">
+                <button class="btn btn-primary" onclick="window.restartLevel()">Try Again</button>
+                <button class="btn btn-secondary" onclick="window.goToLevelSelect()">Level Select</button>
+            </div>
+        </div>
+
+        <!-- ═══ Level Complete Overlay ═══ -->
+        <div class="overlay complete-overlay hidden" id="level-complete-overlay">
+            <div class="sparkle-container" id="sparkles"></div>
+            <div class="complete-title">LEVEL COMPLETE!</div>
+            <div class="complete-subtitle">Well done, slimy friend!</div>
+            <div class="complete-buttons">
+                <button class="btn btn-primary" onclick="window.nextLevel()">Next Level →</button>
+                <button class="btn btn-secondary" onclick="window.goToLevelSelect()">Level Select</button>
+            </div>
+        </div>
+
+        <!-- ═══ Pause Hint ═══ -->
+        <div id="pause-hint" class="hidden">← → MOVE &nbsp; ↑ JUMP &nbsp; ↓ SHRINK</div>
+    </div>
+
+    <script type="module">
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'game.js?v=' + new Date().getTime();
+        document.body.appendChild(script);
+    </script>
+</body>
+
+</html>

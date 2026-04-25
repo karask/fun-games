@@ -57,6 +57,13 @@ const games = [
         genre: 'Tower Defense',
         thumb: 'assets/towerdefense_thumb.png',
         url: 'games/towerdefense/index.html'
+    },
+    {
+        id: 'slimetales',
+        title: 'Slime Tales',
+        genre: 'Platformer',
+        thumb: 'assets/slimetales_thumb.png',
+        url: 'games/slimetales/index.html'
     }
 ];
 

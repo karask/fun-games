@@ -1,0 +1,384 @@
+/* ══════════════════════════════════════════════════════════════
+   SLIME TALES — Stylesheet
+   ══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #080818;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* ── Game Container ──────────────────────────────────────────── */
+
+#game-container {
+    position: relative;
+    width: 800px;
+    height: 560px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+        0 0 40px rgba(255, 0, 255, 0.15),
+        0 0 80px rgba(255, 0, 255, 0.05);
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+/* ── Overlays (shared) ───────────────────────────────────────── */
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 8, 24, 0.88);
+    backdrop-filter: blur(6px);
+    z-index: 10;
+    transition: opacity 0.35s ease;
+}
+
+.overlay.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ── Menu Overlay ────────────────────────────────────────────── */
+
+.game-title {
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    background: linear-gradient(135deg, #ff88ff, #ff00ff, #aa00ff, #ff00ff);
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 25px rgba(255, 0, 255, 0.7));
+    margin-bottom: 6px;
+    animation: titleShimmer 4s ease-in-out infinite;
+}
+
+@keyframes titleShimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.game-subtitle {
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: rgba(180, 160, 200, 0.5);
+    text-transform: uppercase;
+    margin-bottom: 36px;
+}
+
+.menu-buttons {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 30px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+
+.btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 14px 32px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.btn:hover::after {
+    opacity: 1;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #ff00ff, #cc00cc);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255, 0, 255, 0.35);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 6px 30px rgba(255, 0, 255, 0.5);
+}
+
+.btn-primary:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.btn-secondary {
+    background: rgba(60, 60, 90, 0.5);
+    color: #bbb;
+    border: 1px solid rgba(120, 120, 160, 0.3);
+}
+
+.btn-secondary:hover {
+    background: rgba(80, 80, 110, 0.6);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-blue {
+    background: linear-gradient(135deg, #00bfff, #0088cc);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(0, 191, 255, 0.35);
+}
+
+.btn-blue:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 6px 30px rgba(0, 191, 255, 0.5);
+}
+
+/* ── Controls Info ───────────────────────────────────────────── */
+
+.controls-info {
+    margin-top: 10px;
+    display: flex;
+    gap: 30px;
+    opacity: 0.45;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #aaa;
+}
+
+.controls-info .ctrl-group {
+    text-align: center;
+}
+
+.controls-info .ctrl-label {
+    color: #ff88ff;
+    margin-bottom: 3px;
+    font-weight: 700;
+}
+
+.controls-info .ctrl-keys {
+    color: #888;
+}
+
+/* ── Level Select ────────────────────────────────────────────── */
+
+.level-select-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: #ff88ff;
+    text-shadow: 0 0 15px rgba(255, 0, 255, 0.4);
+    margin-bottom: 24px;
+}
+
+#level-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    max-width: 420px;
+    margin: 0 auto 24px;
+}
+
+.level-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.level-btn.unlocked {
+    background: rgba(255, 0, 255, 0.12);
+    border-color: rgba(255, 0, 255, 0.35);
+    color: #ff77ff;
+}
+
+.level-btn.unlocked:hover {
+    background: rgba(255, 0, 255, 0.3);
+    border-color: #ff00ff;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+}
+
+.level-btn.locked {
+    background: rgba(40, 40, 60, 0.3);
+    border-color: rgba(80, 80, 100, 0.2);
+    color: rgba(80, 80, 100, 0.4);
+    cursor: not-allowed;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.level-btn.locked .level-num {
+    font-size: 11px;
+    opacity: 0.4;
+}
+
+.level-btn.locked .lock-icon {
+    font-size: 12px;
+    opacity: 0.3;
+}
+
+.level-btn.latest {
+    animation: pulseGlow 1.8s ease-in-out infinite;
+    border-color: #ff00ff;
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 8px rgba(255, 0, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 22px rgba(255, 0, 255, 0.6);
+    }
+}
+
+/* ── Game Over ───────────────────────────────────────────────── */
+
+.gameover-overlay {
+    background: rgba(30, 5, 5, 0.9) !important;
+}
+
+.gameover-title {
+    font-size: 52px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: #ff4444;
+    text-shadow: 0 0 30px rgba(255, 50, 50, 0.7);
+    margin-bottom: 10px;
+}
+
+.gameover-subtitle {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: rgba(200, 150, 150, 0.6);
+    margin-bottom: 28px;
+}
+
+.gameover-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Level Complete ──────────────────────────────────────────── */
+
+.complete-overlay {
+    background: rgba(5, 20, 5, 0.88) !important;
+}
+
+.complete-title {
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #33ff33, #88ff88, #33ffaa);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px rgba(50, 255, 50, 0.6));
+    margin-bottom: 8px;
+    animation: completeShine 2s ease-in-out infinite;
+}
+
+@keyframes completeShine {
+    0%, 100% { filter: drop-shadow(0 0 15px rgba(50, 255, 50, 0.5)); }
+    50% { filter: drop-shadow(0 0 30px rgba(50, 255, 50, 0.8)); }
+}
+
+.complete-subtitle {
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: rgba(150, 230, 150, 0.6);
+    margin-bottom: 28px;
+}
+
+.complete-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Pause hint ──────────────────────────────────────────────── */
+
+#pause-hint {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: rgba(150, 150, 170, 0.25);
+    z-index: 5;
+    pointer-events: none;
+}
+
+#pause-hint.hidden {
+    display: none;
+}
+
+/* ── Sparkle animation for level complete ────────────────────── */
+
+.sparkle-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #33ff33;
+    animation: sparkleFloat 2s ease-out forwards;
+}
+
+@keyframes sparkleFloat {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-80px) scale(0.3);
+    }
+}
