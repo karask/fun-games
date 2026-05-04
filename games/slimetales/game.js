@@ -16,10 +16,10 @@ const GRAVITY = 0.55;
 const JUMP_FORCE = -10.5;
 const MOVE_ACCEL = 0.9;
 const FRICTION = 0.78;
-const AIR_FRICTION = 0.97;
+const AIR_FRICTION = 0.84;
 const MAX_FALL_SPEED = 14;
 const MAX_H_SPEED = 6.5;
-const DIAGONAL_BOOST = 3;
+const DIAGONAL_BOOST = 1.0;
 
 const SLIME_W = 36;
 const SLIME_H = 38;
