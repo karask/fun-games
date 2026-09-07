@@ -2,215 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#101611">
     <title>Neon Snake</title>
     <script>
-        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+        if (!location.pathname.includes('.') && !location.pathname.endsWith('/')) {
             const base = document.createElement('base');
-            base.href = window.location.pathname + '/';
+            base.href = location.pathname + '/';
             document.head.appendChild(base);
         }
     </script>
-    <!-- Prevent caching to ensure new JS loads -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-        }
-        
-        #game-container {
-            position: relative;
-        }
-
-        canvas {
-            background: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
-            border: 2px solid #333;
-            border-radius: 8px;
-        }
-
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 10;
-        }
-        
-        .score-box {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .score-p1 {
-            color: #7bed9f;
-            text-shadow: 0 0 10px rgba(123, 237, 159, 0.5);
-        }
-
-        .score-p2 {
-            color: #70a1ff;
-            text-shadow: 0 0 10px rgba(112, 161, 255, 0.5);
-            text-align: right;
-            display: none; /* hidden in 1p mode */
-        }
-
-        .score {
-            font-size: 24px;
-            font-weight: 800;
-        }
-
-        .controls {
-            font-size: 12px;
-            opacity: 0.8;
-            font-weight: bold;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.85);
-            border-radius: 8px;
-            z-index: 20;
-        }
-
-        .title {
-            color: #4cd137;
-            font-size: 48px;
-            text-shadow: 0 0 20px rgba(76, 209, 55, 0.6);
-            margin-bottom: 40px;
-            margin-top: 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .menu {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .controls-info {
-            text-align: center;
-            color: #eccc68;
-            font-size: 14px;
-            line-height: 1.6;
-            background: rgba(0,0,0,0.5);
-            padding: 15px 25px;
-            border-radius: 8px;
-            border: 1px solid #333;
-        }
-        
-        .controls-info p {
-            margin: 5px 0;
-        }
-
-        #game-over h2 {
-            font-size: 36px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 18px;
-            font-weight: 800;
-            background: #fbc531;
-            color: #000;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            background: #fff;
-            box-shadow: 0 5px 15px rgba(251, 197, 49, 0.4);
-        }
-        
-        button:active {
-            transform: translateY(1px);
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <div id="ui" style="display: none;">
-            <div class="score-box score-p1" id="ui-p1">
-                <div class="score">SCORE <span id="score-p1-val">0</span></div>
+    <main id="app">
+        <header class="topbar">
+            <a class="wordmark" href="../../index.html" target="_top" aria-label="Back to Arcade Hub"><span aria-hidden="true">↖</span> ARCADE <span class="wordmark-game">/ NEON SNAKE</span></a>
+            <div class="settings">
+                <button id="sound-btn" class="utility" aria-pressed="false">Sound off</button>
+                <button id="effects-btn" class="utility" aria-pressed="false">Reduced effects</button>
             </div>
-            <div class="score-box score-p2" id="ui-p2">
-                <div class="score">P2 SCORE <span id="score-p2-val">0</span></div>
+        </header>
+        <section id="start-screen" class="menu-screen" aria-labelledby="menu-title">
+            <div class="menu-main">
+                <p class="eyebrow">THE CLASSIC. WITH A LITTLE BITE.</p>
+                <h1 id="menu-title">NEON<br><span>SNAKE</span><span class="title-dot" aria-hidden="true">.</span></h1>
+                <p class="intro">Find your rhythm. Take the tight turn.<br>Leave a little room to grow.</p>
+                <fieldset id="difficulty-options">
+                    <legend>CHOOSE YOUR PACE</legend>
+                    <div class="difficulty-options">
+                        <label><input type="radio" name="difficulty" value="relaxed"><span>Relaxed<small>Slow & steady</small></span></label>
+                        <label><input type="radio" name="difficulty" value="classic" checked><span>Classic<small>Builds up speed</small></span></label>
+                        <label><input type="radio" name="difficulty" value="fast"><span>Fast<small>Full speed ahead</small></span></label>
+                    </div>
+                </fieldset>
+                <div class="play-actions">
+                    <button id="solo-btn" class="primary">1 Player <span aria-hidden="true">→</span></button>
+                    <button id="duel-btn">2 Players <span aria-hidden="true">↔</span></button>
+                </div>
+                <p class="hint">Solo high scores · Two-player best of five</p>
+                <p class="hint touch-hint">Swipe or use the direction pad. Two players need a keyboard.</p>
             </div>
-        </div>
-
-        <div id="start-screen" class="overlay">
-            <h1 class="title">Neon Snake</h1>
-            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
-            <div class="menu">
-                <button onclick="window.startGameMode(1)">1 Player</button>
-                <button onclick="window.startGameMode(2)">2 Players</button>
+            <aside class="menu-side">
+                <div class="snake-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="snake-head">••</i><b>◆</b></div>
+                <section class="food-guide" aria-labelledby="food-title">
+                    <h2 id="food-title">KNOW YOUR BITES</h2>
+                    <div><span class="food-symbol apple">●</span><p>Apple <small>+10 points · Grow 1</small></p></div>
+                    <div><span class="food-symbol golden">◆</span><p>Gold <small>+50 points · Grow 3</small></p></div>
+                    <div><span class="food-symbol shrink">−</span><p>Shrink <small>−20 points · Shorten by 2</small></p></div>
+                    <p class="hint">Apples stay. Bonuses last 8 seconds.<br>Chase them, or let them go.</p>
+                </section>
+                <section class="leaderboard" aria-labelledby="leaderboard-title">
+                    <h2 id="leaderboard-title">CLASSIC · PERSONAL BESTS</h2>
+                    <div id="start-leaderboard"></div>
+                    <details id="legacy-scores" hidden><summary>Previous version scores</summary><div id="legacy-leaderboard"></div></details>
+                </section>
+            </aside>
+        </section>
+        <section id="play-screen" hidden aria-label="Snake game">
+            <div class="hud">
+                <div class="player-score p1"><span id="p1-label">SCORE</span><strong id="score-p1-val">0</strong><small id="wins-p1"></small></div>
+                <div class="round-info"><span id="mode-label">CLASSIC</span><strong id="round-label">LEVEL 1</strong><small id="speed-label">9.1 moves / sec</small></div>
+                <div class="player-score p2" id="ui-p2" hidden><span>P2 · ARROWS</span><strong id="score-p2-val">0</strong><small id="wins-p2"></small></div>
+                <button id="pause-btn" class="utility">Pause <span class="keyboard-hint">[Space]</span></button>
             </div>
-            <div class="controls-info">
-                <p><strong>1 Player:</strong> Use Arrows or WASD</p>
-                <p><strong>2 Players:</strong> P1 uses WASD | P2 uses Arrows</p>
-                <p style="margin-top: 10px; color: #fff;">
-                    Eat <span style="color:#ff4757; font-weight:bold;">Red</span> for points, 
-                    <span style="color:#fbc531; font-weight:bold;">Gold</span> for mega-growth, 
-                    <span style="color:#9c88ff; font-weight:bold;">Purple</span> to shrink!
-                </p>
-                <p style="margin-top: 15px; font-size: 12px; color: #aaa;">You can press SPACE to Pause</p>
-            </div>
-        </div>
-
-        <div id="game-over" class="overlay" style="display:none;">
-            <h2 id="winner-text">GAME OVER</h2>
-            <div id="game-over-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
-            
-            <div id="hs-input-section" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
-                <h3 style="color:#fbc531; margin-bottom: 10px; text-shadow: 0 0 10px rgba(251, 197, 49, 0.5);">NEW HIGH SCORE!</h3>
-                <p style="margin-bottom: 15px; font-weight: bold;">PLEASE ENTER YOUR INITIALS:</p>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <input type="text" id="hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #fbc531; border: 2px solid #fbc531; border-radius: 4px; padding: 5px; outline: none;">
-                    <button id="hs-submit-btn">SUBMIT</button>
+            <div id="board">
+                <canvas id="gameCanvas" width="800" height="600" tabindex="0" aria-label="Snake board. Arrow keys or WASD steer. Space pauses."></canvas>
+                <div id="countdown" class="overlay countdown" hidden><p id="countdown-caption">READY?</p><strong id="countdown-number">3</strong><p id="countdown-controls">Arrows or WASD to steer</p></div>
+                <div id="pause-screen" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
+                    <p class="eyebrow">TAKE A BREATHER</p><h2 id="pause-title">Paused</h2>
+                    <p id="pause-reason">Your snake and bonus timers are on hold.</p>
+                    <div class="dialog-actions"><button id="resume-btn" class="primary">Resume</button><button id="pause-menu-btn">Main menu</button></div>
+                </div>
+                <div id="game-over" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="winner-text">
+                    <p class="eyebrow" id="result-label">RUN COMPLETE</p><h2 id="winner-text">Game over</h2>
+                    <p id="result-detail"></p>
+                    <form id="hs-input-section" hidden>
+                        <label for="hs-initials">A NEW PERSONAL BEST! YOUR INITIALS</label>
+                        <div class="initials-row"><input id="hs-initials" name="initials" maxlength="3" pattern="[A-Za-z0-9]{1,3}" autocomplete="off" autocapitalize="characters" aria-label="Your initials, one to three letters or numbers" required><button class="primary" type="submit">Save</button><button id="hs-skip-btn" type="button" class="utility">Skip</button></div>
+                    </form>
+                    <p id="score-message" role="status"></p>
+                    <div id="game-over-leaderboard" class="result-leaderboard" hidden></div>
+                    <div class="dialog-actions"><button id="replay-btn" class="primary">Play again</button><button id="main-menu-btn">Main menu</button></div>
+                    <p class="hint">Space to play again</p>
                 </div>
             </div>
-
-            <button id="main-menu-btn" onclick="window.showMenu()">MAIN MENU</button>
-        </div>
-    </div>
-
-    <!-- Added cache busting parameter to force fresh JS -->
-    <script>
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = 'game.js?v=' + new Date().getTime();
-        document.body.appendChild(script);
-    </script>
+            <footer class="game-footer">
+                <p id="controls-help">Arrows / WASD to steer · Space to pause</p>
+                <p><span class="apple">● +10</span> <span class="golden">◆ +50</span> <span class="shrink">− Shrink</span></p>
+            </footer>
+            <nav id="touch-controls" aria-label="Snake direction controls">
+                <button data-direction="up" aria-label="Move up">↑</button>
+                <button data-direction="left" aria-label="Move left">←</button>
+                <button data-direction="down" aria-label="Move down">↓</button>
+                <button data-direction="right" aria-label="Move right">→</button>
+            </nav>
+        </section>
+        <p id="announcer" class="sr-only" role="status" aria-live="polite"></p>
+        <noscript>This game needs JavaScript enabled to play.</noscript>
+    </main>
+    <script type="module" src="game.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 import { generateLeaderboardHTML } from './assets/highscore.js';
+import { renderScores, scoreKey } from './games/snake/records.js';
 
 // Game Data
 const games = [
@@ -182,6 +183,26 @@ function renderTabContent(gameId, activeBtn) {
     // Update active tab styles
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     activeBtn.classList.add('active');
+
+    if (gameId === 'snake') {
+        hsContent.replaceChildren();
+        const label = document.createElement('label');
+        label.textContent = 'Solo difficulty ';
+        const select = document.createElement('select');
+        select.style.cssText = 'padding:8px;margin:0 0 16px 8px;font:inherit';
+        for (const [value, name] of [['classic', 'Classic'], ['relaxed', 'Relaxed'], ['fast', 'Fast'], ['legacy', 'Previous version (mixed modes)']]) {
+            select.add(new Option(name, value));
+        }
+        label.append(select);
+        const scores = document.createElement('div');
+        const description = document.createElement('p');
+        description.textContent = 'Personal bests on this device. Two-player matches use a separate first-to-three tally.';
+        const refresh = () => renderScores(scores, select.value === 'legacy' ? 'snake' : scoreKey(select.value));
+        select.addEventListener('change', refresh);
+        hsContent.append(label, scores, description);
+        refresh();
+        return;
+    }
 
     // Get and set html from our shared library
     hsContent.innerHTML = generateLeaderboardHTML(gameId);
