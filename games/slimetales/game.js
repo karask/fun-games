@@ -2,7 +2,7 @@
 // SLIME TALES — Main Game Engine
 // ══════════════════════════════════════════════════════════════
 
-import { levels, TILE } from './levels.js';
+import { levels, TILE } from './levels.js?v=squeeze-works-1';
 import { FixedStepClock } from './physics-clock.mjs';
 import { SlimeBody } from './slime-body.mjs';
 
@@ -964,7 +964,7 @@ function drawHints() {
     for (const hint of levelData.hints) {
         const text = hint.text.replace(/Shrink/gi, 'Squeeze');
         const hintPixelX = hint.col * TILE_SIZE + TILE_SIZE / 2;
-        const hintPixelY = 11 * TILE_SIZE;
+        const hintPixelY = (hint.row ?? 11) * TILE_SIZE;
 
         // Proximity check
         let nearestDist = Infinity;

@@ -1,7 +1,11 @@
-# Slime Tales physics
+# Slime Tales
 
 Serve the repository (for example, `python3 -m http.server 8000`) and open
 `/games/slimetales/`, or launch Slime Tales in the Arcade Hub.
+
+Level 2, **The Squeeze Works**, unlocks after clearing Level 1. Its route teaches
+squeezing and wall jumps over safe ground, then combines them with a toxic-pool
+crossing and a final tunnel. See [the level design](LEVEL_2.md) for the layout.
 
 ## Controls
 
@@ -37,12 +41,15 @@ the springs provide softness. Both players share the same physics.
 
 ```sh
 node games/slimetales/tests/physics.test.mjs
+node games/slimetales/tests/level-2.test.mjs
 ```
 
 The tests run the shipped controller with small tile fixtures. They cover fixed
 timing, jump input and repeat, ledge grace, buffered and variable-height jumps,
 floor/platform collisions, horizontal and vertical squeezing, safe recovery,
 wall grip/release/jumps, elastic settling, terrain contact, hazards, and revival.
+The Level 2 tests check safe spawn and flag positions, required squeeze and wall
+jump encounters, and complete routes from both spawns with varied takeoffs.
 
 For browser checks, exercise full and short jumps, squeeze through the first
 level's tunnel, release down beneath its ceiling, grip and jump from a wall, and
@@ -53,3 +60,6 @@ This update passed 24 regression tests and browser checks for a complete first
 level, its squeeze tunnel, wall grip and jumping, independent two-player controls,
 and Arcade Hub launch. The two-player browser sample had a 16.7 ms median and
 95th-percentile frame interval; this is a local headless Chrome measurement.
+
+Level 2 passed all 33 controller and level tests, full keyboard playthroughs in
+solo and co-op modes, and launch through the Arcade Hub with no browser errors.

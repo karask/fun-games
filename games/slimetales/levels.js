@@ -53,7 +53,7 @@ function buildLevel1() {
 
 // ── Import all level packs ──────────────────────────────────
 
-import { earlyLevels } from './levels_2_8.js';
+import { earlyLevels } from './levels_2_8.js?v=squeeze-works-1';
 import { midLevels } from './levels_9_16.js';
 import { lateLevels } from './levels_17_23.js';
 import { finalLevels } from './levels_24_30.js';

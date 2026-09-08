@@ -19,49 +19,38 @@ function set(map, x, y, tile) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Level 2: "Hop Along" — W=80, H=18
-// Simple gaps and 1-2 spikes. A gentle second step.
-//
-// Layout:
-//   Cols  0-14 : Flat start area
-//   Cols 15-17 : 3-tile gap (easy jump)
-//   Cols 18-33 : Ground with single spike at 26
-//   Cols 34-36 : 3-tile gap
-//   Cols 37-50 : Ground, revival flag at 44
-//   Cols 51-54 : 4-tile gap (slight challenge)
-//   Cols 55-64 : Ground with spike at 60
-//   Cols 65-67 : 3-tile gap
-//   Cols 68-79 : Final approach + end flag
+// Level 2: "The Squeeze Works" — 84×20 tiles, main floor at row 16.
+// Introduce each soft-body move over a safe floor before the goo crossing.
 // ═══════════════════════════════════════════════════════════════
 
 function buildLevel2() {
-    const W = 80, H = 18;
-    const m = createMap(W, H);
+    const m = createMap(84, 20);
+    fill(m, 0, 16, 83, 19, TILE.SOLID);
 
-    // ─ Base ground ─
-    fill(m, 0, 14, W - 1, 17, TILE.SOLID);
+    // Warm-up: a shallow gap with a safe, jumpable recovery floor.
+    fill(m, 7, 16, 8, 17, TILE.AIR);
 
-    // ─ Gap 1: cols 15-17 (3 tiles) ─
-    fill(m, 15, 14, 17, 15, TILE.AIR);
+    // Compression gate: row 15 is a one-tile-high passage.
+    fill(m, 12, 7, 18, 14, TILE.SOLID);
 
-    // ─ Single spike warning ─
-    set(m, 26, 13, TILE.SPIKE_UP);
+    // Wall-jump chamber. Walk under the left wall, grip the right wall,
+    // then jump away and alternate sides to reach the raised landing.
+    // The floor below is safe, so missed attempts can be retried in place.
+    fill(m, 30, 10, 31, 13, TILE.SOLID);
+    fill(m, 36, 11, 44, 15, TILE.SOLID);
 
-    // ─ Gap 2: cols 34-36 (3 tiles) ─
-    fill(m, 34, 14, 36, 15, TILE.AIR);
+    // Keep cols 45–53 clear: land, release the controls, and line up the pool.
 
-    // ─ Gap 3: cols 51-54 (4 tiles, needs running start) ─
-    fill(m, 51, 14, 54, 15, TILE.AIR);
+    // Goo crossing: two broad, ascending stepping stones. Each jump has
+    // room for a running start and does not require a frame-perfect takeoff.
+    fill(m, 54, 16, 61, 17, TILE.AIR);
+    fill(m, 54, 18, 61, 18, TILE.TOXIC);
+    fill(m, 55, 14, 57, 14, TILE.PLATFORM);
+    fill(m, 59, 13, 61, 13, TILE.PLATFORM);
 
-    // ─ Spike near the end ─
-    set(m, 60, 13, TILE.SPIKE_UP);
-
-    // ─ Gap 4: cols 65-67 (3 tiles) ─
-    fill(m, 65, 14, 67, 15, TILE.AIR);
-
-    // ─ Decorative platform (optional shortcut) ─
-    fill(m, 42, 11, 45, 11, TILE.PLATFORM);
-
+    // Final squeeze and a shallow hop before the finish.
+    fill(m, 67, 13, 72, 14, TILE.SOLID);
+    fill(m, 76, 16, 77, 17, TILE.AIR);
     return m;
 }
 
@@ -438,19 +427,28 @@ export const earlyLevels = [
     // ── Level 2 ──
     {
         id: 2,
-        name: "Hop Along",
-        width: 80,
-        height: 18,
-        spawnP1: { col: 3, row: 14 },
-        spawnP2: { col: 5, row: 14 },
-        endFlag: { col: 75, row: 14 },
+        name: "The Squeeze Works",
+        width: 84,
+        height: 20,
+        spawnP1: { col: 3, row: 16 },
+        spawnP2: { col: 5, row: 16 },
+        endFlag: { col: 80, row: 16 },
         revivalFlags: [
-            { col: 25, row: 14 },
-            { col: 44, row: 14 }
+            { col: 24, row: 16 },
+            { col: 40, row: 11 },
+            { col: 64, row: 16 }
         ],
         hints: [
-            { col: 12, text: "Jump the gaps!" },
-            { col: 49, text: "Get a running start!" }
+            { col: 5, row: 13, text: "A little hop to warm up" },
+            { col: 11, row: 12, text: "Hold down to squeeze through" },
+            { col: 23, row: 13, text: "Release down to stand tall" },
+            { col: 32, row: 8, text: "Press into a wall to grip" },
+            { col: 35, row: 6, text: "Jump away, then switch sides" },
+            { col: 41, row: 8, text: "A safe place to catch your breath" },
+            { col: 49, row: 13, text: "Take your time. Line up the jump" },
+            { col: 54, row: 11, text: "Land on the stepping stones" },
+            { col: 66, row: 12, text: "One more squeeze" },
+            { col: 79, row: 13, text: "You made it!" }
         ],
         map: buildLevel2()
     },
