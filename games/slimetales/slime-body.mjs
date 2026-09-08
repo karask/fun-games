@@ -28,7 +28,10 @@ export class SlimeBody {
             const angle = i / this.points.length * Math.PI * 2 - Math.PI / 2;
             const cosine = Math.cos(angle), sine = Math.sin(angle);
             const ripple = reducedMotion ? 0 : Math.sin(time * 0.12 + i * 0.9) * Math.min(0.65, Math.abs(vx) * 0.12);
-            const x = Math.sign(cosine) * Math.abs(cosine) ** 0.85 * width / (2 * stretch);
+            let x = Math.sign(cosine) * Math.abs(cosine) ** 0.85 * width / (2 * stretch);
+            if (wall && Math.sign(cosine) === wall) {
+                x = wall * (width / 2 + 2) * Math.min(1, Math.abs(cosine) * 1.8);
+            }
             let y = (sine * 0.55 - 0.5) * height * stretch;
             if (grounded) y = Math.min(0, y + Math.max(0, sine - 0.5) * height * 0.12);
             return { x: x + ripple - vx * 0.3 * (1 - sine), y };

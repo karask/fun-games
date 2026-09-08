@@ -464,11 +464,22 @@ class Slime {
         // flattens only that part of the skin, including under a low ceiling.
         const originY = -this.height / 2;
         const count = Math.max(1, Math.ceil(Math.hypot(point.x, point.y - originY) / 2));
+        const blocked = p => isSolid(Math.floor((this.centerX + p.x) / TILE_SIZE), Math.floor((this.bottom + p.y) / TILE_SIZE));
         let previous = { x: 0, y: originY };
         for (let i = 1; i <= count; i++) {
             const t = i / count;
             const next = { x: point.x * t, y: originY + (point.y - originY) * t };
-            if (isSolid(Math.floor((this.centerX + next.x) / TILE_SIZE), Math.floor((this.bottom + next.y) / TILE_SIZE))) return previous;
+            if (blocked(next)) {
+                // Refine the contact so the skin touches the surface instead
+                // of hovering up to one ray-march step away from it.
+                let inside = next;
+                for (let j = 0; j < 5; j++) {
+                    const middle = { x: (previous.x + inside.x) / 2, y: (previous.y + inside.y) / 2 };
+                    if (blocked(middle)) inside = middle;
+                    else previous = middle;
+                }
+                return previous;
+            }
             previous = next;
         }
         return point;
@@ -968,7 +979,13 @@ function drawHints() {
 
         const alpha = Math.pow(1 - nearestDist / maxDist, 1.5);
         const sx = hintPixelX - camera.x;
-        const sy = hintPixelY - camera.y;
+        let sy = hintPixelY - camera.y;
+        for (const player of players) {
+            if (player.alive && Math.abs(player.centerX - hintPixelX) < 110 &&
+                player.y - camera.y < sy + 18 && player.bottom - camera.y > sy - 18) {
+                sy = player.y - camera.y - 28;
+            }
+        }
         const bob = Math.sin(frameCount * 0.04 + hint.col) * 4;
 
         ctx.save();

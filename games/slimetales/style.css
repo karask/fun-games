@@ -190,6 +190,14 @@ body {
     color: #888;
 }
 
+.physics-tip {
+    margin-top: 24px;
+    max-width: 90%;
+    color: #d9c3e4;
+    font: 13px/1.8 system-ui, sans-serif;
+    text-align: center;
+}
+
 /* ── Level Select ────────────────────────────────────────────── */
 
 .level-select-title {
@@ -343,9 +351,15 @@ body {
     bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 8px;
-    letter-spacing: 2px;
-    color: rgba(150, 150, 170, 0.25);
+    width: max-content;
+    max-width: calc(100% - 24px);
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(8, 8, 24, 0.88);
+    font: 10px/1.4 system-ui, sans-serif;
+    letter-spacing: 0.5px;
+    text-align: center;
+    color: #d9c3e4;
     z-index: 5;
     pointer-events: none;
 }

@@ -343,3 +343,26 @@ test('a brief jump tap has a lower apex than holding jump, even between updates'
     };
     assert.ok(apex(false) > apex(true) + 20, 'Holding should give substantially more height than a quick tap');
 });
+
+test('a revival flag restores a compressed teammate above the floor', () => {
+    const game = createHarness();
+    game.key('ArrowDown', true);game.step(25);
+    game.player.pop();
+    game.run(`
+        playerCount = 2;
+        levelData.revivalFlags = [{ col: 3, row: 14 }];
+        players.push(new Slime(96, 14 * 32 - SLIME_H, 2));
+        checkRevivalFlags();
+    `);
+    assert.equal(game.player.alive, true);
+    assert.equal(game.player.bottom, 14 * 32, 'Recovery must use the restored height, not the previous squeezed height');
+    assert.equal(game.player.grounded, false, 'The next collision step should establish the new floor contact');
+});
+
+test('gripping flattens several skin points against the wall', () => {
+    const game = wallFixture();
+    game.key('ArrowRight', true);
+    game.step(25);
+    const contactPoints = game.player.body.points.filter(p => p.x > game.player.width / 2 - 0.2);
+    assert.ok(contactPoints.length >= 3, 'The gripped side should visibly flatten against the wall');
+});
