@@ -7,15 +7,15 @@ window.addEventListener('DOMContentLoaded', () => {
   canvas = document.getElementById('gameCanvas');
   ctx    = canvas.getContext('2d');
 
-  resizeCanvas();
-  window.addEventListener('resize', () => { resizeCanvas(); });
-
   canvas.addEventListener('click',       onCanvasClick);
   canvas.addEventListener('contextmenu', e => { e.preventDefault(); onRightClick(e); });
   canvas.addEventListener('mousemove',   onMouseMove);
   canvas.addEventListener('mouseleave',  () => { if(G) G.hoverCell=null; });
 
   initUI();
+  resizeCanvas();
+  new ResizeObserver(resizeCanvas).observe(canvas);
+  window.addEventListener('resize', resizeCanvas);
   showMenu();
 
   lastTime = performance.now();
@@ -23,10 +23,12 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function resizeCanvas() {
-  const hud  = document.getElementById('hud');
-  const shop = document.getElementById('shop');
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight - (hud?hud.offsetHeight:60) - (shop?shop.offsetHeight:110);
+  const rect = canvas.getBoundingClientRect();
+  viewWidth = Math.max(1, rect.width);
+  viewHeight = Math.max(1, rect.height);
+  pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(viewWidth * pixelRatio);
+  canvas.height = Math.round(viewHeight * pixelRatio);
   updateOffsets();
 }
 
@@ -35,7 +37,7 @@ function gameLoop(now) {
   requestAnimationFrame(gameLoop);
   let dt = now - lastTime; lastTime = now;
   dt = Math.min(dt, 100);
-  if(G && G.phase==='wave') update(dt * G.speed);
+  if(G && G.phase==='wave' && !G.paused) update(dt * G.speed);
   renderFrame();
 }
 
@@ -48,6 +50,7 @@ function startLevel(idx) {
 
   G = {
     phase:             'build',
+    paused:            false,
     levelIdx:          idx,
     waveIdx:           0,
     lives:             lvl.lives,
@@ -79,6 +82,7 @@ function startLevel(idx) {
 
 // ── Update ────────────────────────────────────────────────────────────────
 function update(dt) {
+  if(G.paused) return;
   updateSpawning(dt);
   updateMonsters(dt);
   updateTowers(dt);
@@ -189,7 +193,7 @@ function updateMonsters(dt) {
 
     // Movement
     if(speedMult===0) continue;
-    if(m.wpIdx>=G.screenWPs.length) { m.reachedEnd=true; G.lives--; updateHUD(); continue; }
+    if(m.wpIdx>=G.screenWPs.length) { m.reachedEnd=true; G.lives = m.isBoss ? 0 : Math.max(0, G.lives - 1); updateHUD(); continue; }
 
     const wp=G.screenWPs[m.wpIdx];
     const dx=wp.x-m.x, dy=wp.y-m.y;
@@ -206,6 +210,7 @@ function updateMonsters(dt) {
 }
 
 function killMonster(m) {
+  if(m.dead || m.reachedEnd) return;
   m.dead=true;
   G.gold+=m.reward;
   G.killScore = (G.killScore || 0) + m.reward;
@@ -271,7 +276,7 @@ function updateTowers(dt) {
 function updateProjectiles(dt) {
   for(const proj of G.projectiles) {
     if(proj.dead) continue;
-    const target=G.monsters.find(m=>m.id===proj.targetId&&!m.dead);
+    const target=G.monsters.find(m=>m.id===proj.targetId&&!m.dead&&!m.reachedEnd);
     if(!target) { proj.dead=true; continue; }
 
     const dx=target.x-proj.x, dy=target.y-proj.y;
@@ -283,7 +288,7 @@ function updateProjectiles(dt) {
       // splash
       if(proj.splashR>0) {
         for(const m of G.monsters) {
-          if(m.dead) continue;
+          if(m.dead || m.reachedEnd) continue;
           const ex=m.x-target.x, ey=m.y-target.y;
           if(ex*ex+ey*ey<=proj.splashR*proj.splashR) applyDamage(m,proj);
         }
@@ -298,6 +303,7 @@ function updateProjectiles(dt) {
 }
 
 function applyDamage(m, proj) {
+  if(m.dead || m.reachedEnd) return;
   if(m.dodge>0 && Math.random()<m.dodge) return;
   const dmg=Math.max(1, proj.damage-m.armor);
   m.hp-=dmg;
@@ -403,15 +409,17 @@ function upgradeTower() {
 function sellTower() {
   const t=G.inspectedTower;
   if(!t) return;
-  const def=TOWER_DEFS[t.type];
-  const totalPaid=[...def.levels].slice(0,t.level+1).reduce((s,l)=>s+(l.cost||0)+(l.upgradeCost&&t.level>=[...def.levels].indexOf(l)?l.upgradeCost:0),0);
-  // Simple formula: give back 50% of base cost + upgrades paid
-  let paid=def.levels[0].cost;
-  for(let i=1;i<=t.level;i++) paid+=def.levels[i-1].upgradeCost||0;
-  G.gold+=Math.floor(paid*0.5);
+  G.gold+=towerSellValue(t);
   G.towers=G.towers.filter(x=>x.id!==t.id);
   G.inspectedTower=null;
   updateHUD();
+}
+
+function towerSellValue(tower) {
+  const levels = TOWER_DEFS[tower.type].levels;
+  let paid = levels[0].cost;
+  for (let i = 0; i < tower.level; i++) paid += levels[i].upgradeCost;
+  return Math.floor(paid / 2);
 }
 
 // ── Input handlers ────────────────────────────────────────────────────────

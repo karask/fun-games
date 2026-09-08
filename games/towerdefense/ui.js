@@ -85,7 +85,7 @@ function renderTowerInfo() {
     const t   = G.inspectedTower;
     const def = TOWER_DEFS[t.type];
     const stats = def.levels[t.level];
-    const sellV = Math.floor(([...def.levels].slice(0,t.level+1).reduce((s,l)=>s+(l.cost||0)+(l.upgradeCost||0),0))*0.5);
+    const sellV = towerSellValue(t);
     const canUp  = t.level < 2;
     const upCost = canUp ? def.levels[t.level].upgradeCost : 0;
     panel.innerHTML = `

@@ -1,5 +1,10 @@
 // ── Rendering offsets (updated on resize) ────────────────────────────────
-let OFFSET_X = 0, OFFSET_Y = 0;
+// Simulation uses a fixed world. Only the camera changes with the viewport.
+let OFFSET_X = (ROWS - 1) * 36 + 80, OFFSET_Y = 110;
+let VIEW_SCALE = 1, VIEW_X = 0, VIEW_Y = 0;
+let viewWidth = 1000, viewHeight = 600, pixelRatio = 1;
+function worldToScreen(x, y) { return { x: x * VIEW_SCALE + VIEW_X, y: y * VIEW_SCALE + VIEW_Y }; }
+function screenToWorld(x, y) { return { x: (x - VIEW_X) / VIEW_SCALE, y: (y - VIEW_Y) / VIEW_SCALE }; }
 
 // Convert grid (col,row) → tile bounding-box top-left (bx, by)
 function gridToBB(col, row) {
@@ -18,7 +23,8 @@ function gridCenter(col, row) {
 // Screen click → grid cell
 function screenToGrid(mx, my) {
   if(DHW===0||DHH===0) return {col:-1,row:-1};
-  const x = mx - OFFSET_X, y = my - OFFSET_Y;
+  const p = screenToWorld(mx, my);
+  const x = p.x - OFFSET_X - DHW, y = p.y - OFFSET_Y;
   return {
     col: Math.floor((x/DHW + y/DHH) / 2),
     row: Math.floor((y/DHH - x/DHW) / 2),
@@ -26,30 +32,17 @@ function screenToGrid(mx, my) {
 }
 
 // Dynamic tile size (recalculated on resize)
-let DTW = 48, DTH = 24, DHW = 24, DHH = 12;
+const DTW = 72, DTH = 36, DHW = 36, DHH = 18;
 
 // Recompute OFFSET_X/Y to centre the isometric grid on the canvas
 function updateOffsets() {
   if(!canvas) return;
 
-  // Target: use 90% of the smaller canvas dimension, with correct aspect
-  // gridW = (COLS+ROWS-2)*HALF_W + TW  =>  (COLS+ROWS-1)*HALF_W
-  // gridH = (COLS+ROWS-2)*HALF_H + TH  =>  (COLS+ROWS-1)*HALF_H
-  // We solve for HALF_W such that gridW fits in 90% of canvas width
-  // and gridH fits in 90% of canvas height, taking the smaller scale.
-  const maxW = canvas.width  * 0.92;
-  const maxH = canvas.height * 0.90;
-  const halfWbyW = maxW / (COLS + ROWS - 1);
-  const halfHbyH = maxH / (COLS + ROWS - 1);
-  // keep 2:1 ratio (HALF_H = HALF_W / 2)
-  const halfW = Math.floor(Math.min(halfWbyW, halfHbyH * 2));
-  const halfH = Math.floor(halfW / 2);
-  DTW = halfW * 2; DTH = halfH * 2; DHW = halfW; DHH = halfH;
-
-  const gridW = (COLS + ROWS - 2) * DHW + DTW;
-  const gridH = (COLS + ROWS - 2) * DHH + DTH + TD;
-  OFFSET_X = Math.floor((canvas.width  - gridW) / 2 + (ROWS - 1) * DHW);
-  OFFSET_Y = Math.max(8, Math.floor((canvas.height - gridH) / 2));
+  const worldWidth = (COLS + ROWS) * DHW + 160;
+  const worldHeight = (COLS + ROWS) * DHH + 200;
+  VIEW_SCALE = Math.max(0.1, Math.min(viewWidth / worldWidth, viewHeight / worldHeight));
+  VIEW_X = (viewWidth - worldWidth * VIEW_SCALE) / 2;
+  VIEW_Y = (viewHeight - worldHeight * VIEW_SCALE) / 2;
 }
 
 // ── Tile colours per theme ────────────────────────────────────────────────
@@ -204,9 +197,10 @@ function drawHoverHighlight(ctx, col, row, canPlace) {
 // ── Full scene render ──────────────────────────────────────────────────────
 function renderFrame() {
   if(!ctx||!canvas) return;
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 
   // Background gradient
-  const bg=ctx.createLinearGradient(0,0,0,canvas.height);
+  const bg=ctx.createLinearGradient(0,0,0,viewHeight);
   if(!G||G.phase==='menu'){
     bg.addColorStop(0,'#0d0f1a'); bg.addColorStop(1,'#1a1030');
   } else {
@@ -215,9 +209,12 @@ function renderFrame() {
     else if(theme==='forest'){ bg.addColorStop(0,'#0a150a'); bg.addColorStop(1,'#050d05'); }
     else { bg.addColorStop(0,'#1a0505'); bg.addColorStop(1,'#0d0000'); }
   }
-  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=bg; ctx.fillRect(0,0,viewWidth,viewHeight);
 
   if(!G || G.phase==='menu') return;
+  ctx.save();
+  ctx.translate(VIEW_X, VIEW_Y);
+  ctx.scale(VIEW_SCALE, VIEW_SCALE);
 
   const lvl=LEVELS[G.levelIdx];
   const theme=lvl.theme;
@@ -266,4 +263,5 @@ function renderFrame() {
 
   // Particles
   for(const p of G.particles) drawParticle(ctx,p);
+  ctx.restore();
 }
