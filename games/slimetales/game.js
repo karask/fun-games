@@ -3,6 +3,8 @@
 // ══════════════════════════════════════════════════════════════
 
 import { levels, TILE } from './levels.js';
+import { FixedStepClock } from './physics-clock.mjs';
+import { SlimeBody } from './slime-body.mjs';
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -23,8 +25,10 @@ const DIAGONAL_BOOST = 1.0;
 
 const SLIME_W = 36;
 const SLIME_H = 38;
-const SLIME_SHRINK_W = 24;
-const SLIME_SHRINK_H = 18;
+const SLIME_SHRINK_W = 48;
+const SLIME_SHRINK_H = 22;
+const SLIME_NARROW_W = 24;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // ═══════════════════════════════════════════════════════════════
 // CANVAS & DOM
@@ -68,10 +72,28 @@ let levelCompleteTimer = 0;
 // ═══════════════════════════════════════════════════════════════
 
 const keys = {};
+const physicsClock = new FixedStepClock();
+
+function clearInput() {
+    for (const code of Object.keys(keys)) keys[code] = false;
+    for (const player of players) {
+        player.jumpHeld = false;
+        player.jumpBuffer = 0;
+        player.jumpPressed = false;
+    }
+    physicsClock.reset();
+}
+window.addEventListener('blur', clearInput);
+document.addEventListener('visibilitychange', clearInput);
 
 window.addEventListener('keydown', (e) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
+    }
+    if (!e.repeat && !keys[e.code]) {
+        for (const player of players) {
+            if (e.code === player.controls.up) player.jumpPressed = true;
+        }
     }
     keys[e.code] = true;
 });
@@ -115,12 +137,16 @@ class Slime {
         this.shrunk = false;
         this.grounded = false;
         this.facing = 1;
+        this.jumpHeld = false;
+        this.jumpPressed = false;
+        this.jumpBuffer = 0;
+        this.coyoteTime = 0;
+        this.wallSide = 0;
+        this.wallJumpTime = 0;
+        this.gripping = false;
+        this.body = new SlimeBody(this.width, this.height);
 
-        // Animation
-        this.wobblePhase = Math.random() * Math.PI * 2;
-        this.squashX = 1;
-        this.squashY = 1;
-        this.moveAnim = 0;
+        // Face animation
         this.blinkTimer = 120 + Math.random() * 180;
         this.isBlinking = false;
         this.blinkDuration = 0;
@@ -165,72 +191,104 @@ class Slime {
         const wantUp = keys[this.controls.up];
         const wantDown = keys[this.controls.down];
 
-        // Horizontal movement
-        if (wantLeft) {
+        this.wallJumpTime = Math.max(0, this.wallJumpTime - 1);
+        // Give a wall jump a brief outward push before steering takes over.
+        if (wantLeft && !this.wallJumpTime) {
             this.vx -= MOVE_ACCEL;
             this.facing = -1;
         }
-        if (wantRight) {
+        if (wantRight && !this.wallJumpTime) {
             this.vx += MOVE_ACCEL;
             this.facing = 1;
         }
 
-        // Jump
-        if (wantUp && this.grounded) {
-            this.vy = JUMP_FORCE;
-            this.grounded = false;
-            this.squashY = 1.35;
-            this.squashX = 0.7;
+        // A fresh press gets a short landing buffer and ledge grace period.
+        if (this.grounded) this.coyoteTime = 6;
+        else this.coyoteTime = Math.max(0, this.coyoteTime - 1);
+        this.jumpBuffer = this.jumpPressed || (wantUp && !this.jumpHeld) ? 7 : Math.max(0, this.jumpBuffer - 1);
+        this.jumpPressed = false;
+        if (!wantUp && this.jumpHeld && this.vy < -4) this.vy *= 0.5;
+        this.jumpHeld = Boolean(wantUp);
 
-            if (wantRight) this.vx += DIAGONAL_BOOST;
-            if (wantLeft) this.vx -= DIAGONAL_BOOST;
+        if (this.jumpBuffer > 0 && (this.coyoteTime > 0 || (this.gripping && !wantDown))) {
+            if (!this.coyoteTime && this.gripping) {
+                this.vx = -this.wallSide * 5.8;
+                this.wallJumpTime = 9;
+                this.facing = -this.wallSide;
+            }
+            this.body.jump();
+            this.gripping = false;
+            this.vy = wantUp ? JUMP_FORCE : JUMP_FORCE * 0.65;
+            this.grounded = false;
+            this.coyoteTime = 0;
+            this.jumpBuffer = 0;
+
+            if (!this.wallJumpTime && wantRight) this.vx += DIAGONAL_BOOST;
+            if (!this.wallJumpTime && wantLeft) this.vx -= DIAGONAL_BOOST;
 
             spawnLandParticles(this.centerX, this.bottom, this.colorBase);
         }
 
-        // Shrink / Unshrink
-        if (wantDown) {
-            if (!this.shrunk) {
-                this.shrunk = true;
-                const oldBottom = this.bottom;
-                this.x += (this.width - SLIME_SHRINK_W) / 2;
-                this.width = SLIME_SHRINK_W;
-                this.height = SLIME_SHRINK_H;
-                this.y = oldBottom - this.height;
-            }
-        } else {
-            if (this.shrunk && this.canUnshrink()) {
-                const oldBottom = this.bottom;
-                this.x -= (SLIME_W - this.width) / 2;
-                this.width = SLIME_W;
-                this.height = SLIME_H;
-                this.y = oldBottom - this.height;
-                this.shrunk = false;
-            }
-        }
+        this.reshape(Boolean(wantDown));
     }
 
-    canUnshrink() {
-        const testX = this.centerX - SLIME_W / 2;
-        const testY = this.bottom - SLIME_H;
-        const c1 = Math.floor(testX / TILE_SIZE);
-        const c2 = Math.floor((testX + SLIME_W - 0.01) / TILE_SIZE);
-        const r1 = Math.floor(testY / TILE_SIZE);
-        const r2 = Math.floor((testY + SLIME_H - 0.01) / TILE_SIZE);
-
-        for (let r = r1; r <= r2; r++)
-            for (let c = c1; c <= c2; c++)
+    shapeFits(width, height) {
+        const x = this.centerX - width / 2, y = this.bottom - height;
+        if (x < 0 || y < 0 || (levelData && x + width > levelData.width * TILE_SIZE)) return false;
+        for (let r = Math.floor(y / TILE_SIZE); r <= Math.floor((this.bottom - 0.01) / TILE_SIZE); r++) {
+            for (let c = Math.floor(x / TILE_SIZE); c <= Math.floor((x + width - 0.01) / TILE_SIZE); c++) {
                 if (isSolid(c, r)) return false;
+            }
+        }
         return true;
     }
 
-    // ── Physics ──────────────────────────────────────────────
+    reshape(squeeze) {
+        let targetW = squeeze ? SLIME_SHRINK_W : SLIME_W;
+        let targetH = squeeze ? SLIME_SHRINK_H : SLIME_H;
+        const belowRow = Math.floor((this.bottom + 1) / TILE_SIZE);
+        const centerCol = Math.floor(this.centerX / TILE_SIZE);
+        const narrowShaft = !isSolid(centerCol, belowRow) &&
+            isSolid(centerCol - 1, belowRow) && isSolid(centerCol + 1, belowRow);
+        // A tight shaft can compress sideways too. Never enlarge into terrain.
+        if (squeeze && (narrowShaft || !this.shapeFits(targetW, targetH))) targetW = SLIME_NARROW_W;
+        if (!squeeze && !this.shapeFits(targetW, targetH)) return;
+        const approach = (value, target) => Math.abs(value - target) < 0.2 ? target : value + (target - value) * 0.3;
+        const width = approach(this.width, targetW), height = approach(this.height, targetH);
+        const center = this.centerX, bottom = this.bottom;
+        // Reducing height first lets the sides spread beneath a low ceiling.
+        if (this.shapeFits(this.width, height)) { this.height = height; this.y = bottom - height; }
+        if (this.shapeFits(width, this.height)) { this.width = width; this.x = center - width / 2; }
+        this.shrunk = squeeze || this.height < SLIME_H - 0.1 || this.width < SLIME_W - 0.1;
+    }
 
     applyPhysics() {
         this.vy += GRAVITY;
         if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;
 
-        this.vx *= (this.grounded ? FRICTION : AIR_FRICTION);
+        const wantLeft = keys[this.controls.left];
+        const wantRight = keys[this.controls.right];
+
+        if (this.wallJumpTime) {
+            this.vx *= 0.98;
+        } else if (this.grounded) {
+            this.vx *= FRICTION;
+        } else {
+            if (!wantLeft && !wantRight) {
+                // Snappy stop in the air when releasing controls
+                this.vx *= 0.80;
+            } else {
+                const isBrakingLeft = wantLeft && this.vx > 0;
+                const isBrakingRight = wantRight && this.vx < 0;
+                if (isBrakingLeft || isBrakingRight) {
+                    // Extra responsiveness when trying to reverse/steer mid-air
+                    this.vx *= 0.72;
+                } else {
+                    this.vx *= AIR_FRICTION;
+                }
+            }
+        }
+
         if (this.vx > MAX_H_SPEED) this.vx = MAX_H_SPEED;
         if (this.vx < -MAX_H_SPEED) this.vx = -MAX_H_SPEED;
         if (Math.abs(this.vx) < 0.08) this.vx = 0;
@@ -240,8 +298,13 @@ class Slime {
 
     resolveCollisions() {
         // Move X then resolve
+        this.wallSide = 0;
         this.x += this.vx;
         this._resolveX();
+
+        const towardWall = this.wallSide < 0 ? keys[this.controls.left] : this.wallSide > 0 && keys[this.controls.right];
+        this.gripping = Boolean(this.wallSide && towardWall && !keys[this.controls.down] && !this.wallJumpTime && !this.grounded);
+        if (this.gripping && this.vy > 0) this.vy = Math.min(this.vy, 1.2);
 
         // Move Y then resolve
         this.y += this.vy;
@@ -271,8 +334,10 @@ class Slime {
             for (let c = c1; c <= c2; c++) {
                 if (!isSolid(c, r)) continue;
                 if (this.vx > 0) {
+                    this.wallSide = 1;
                     this.x = c * TILE_SIZE - this.width;
                 } else if (this.vx < 0) {
+                    this.wallSide = -1;
                     this.x = (c + 1) * TILE_SIZE;
                 }
                 this.vx = 0;
@@ -295,14 +360,14 @@ class Slime {
                     if (this.vy > 0) {
                         // Landing: squash effect
                         if (this.vy > 3) {
-                            this.squashY = Math.max(0.55, 1 - this.vy * 0.035);
-                            this.squashX = Math.min(1.45, 1 + this.vy * 0.025);
+                            this.body.impact(this.vy);
                             spawnLandParticles(this.centerX, r * TILE_SIZE, this.colorBase);
                         }
                         this.y = r * TILE_SIZE - this.height;
                         this.vy = 0;
                         this.grounded = true;
                     } else if (this.vy < 0) {
+                        this.body.impact(this.vy * 0.5);
                         this.y = (r + 1) * TILE_SIZE;
                         this.vy = 0;
                     }
@@ -311,6 +376,7 @@ class Slime {
                         const prevBottom = (this.y - this.vy) + this.height;
                         const tileTop = r * TILE_SIZE;
                         if (prevBottom <= tileTop + 2) {
+                            if (this.vy > 3) this.body.impact(this.vy);
                             this.y = tileTop - this.height;
                             this.vy = 0;
                             this.grounded = true;
@@ -360,33 +426,21 @@ class Slime {
         this.shrunk = false;
         this.width = SLIME_W;
         this.height = SLIME_H;
-        this.squashX = 1;
-        this.squashY = 1;
+        this.grounded = false;
+        this.jumpHeld = Boolean(keys[this.controls.up]);
+        this.jumpPressed = false;
+        this.jumpBuffer = this.coyoteTime = this.wallJumpTime = this.wallSide = 0;
+        this.gripping = false;
+        this.body = new SlimeBody(this.width, this.height);
         spawnReviveParticles(this.centerX, this.centerY);
     }
 
     // ── Animation ────────────────────────────────────────────
 
     animate() {
-        this.wobblePhase += 0.07;
-
-        // Crawling animation
-        if (Math.abs(this.vx) > 0.5) {
-            this.moveAnim += 0.18;
-        }
-
-        // Squash/stretch spring toward 1
-        this.squashY += (1 - this.squashY) * 0.12;
-        this.squashX += (1 - this.squashX) * 0.12;
-
-        // Velocity-based stretch
-        if (!this.grounded) {
-            const vStretch = 1 - this.vy * 0.012;
-            const hStretch = 1 + this.vy * 0.008;
-            this.squashY += (vStretch - this.squashY) * 0.08;
-            this.squashX += (hStretch - this.squashX) * 0.08;
-        }
-
+        this.body.step({ width: this.width, height: this.height, vx: this.vx, vy: this.vy,
+            grounded: this.grounded, wall: this.gripping ? this.wallSide : 0, time: frameCount,
+            reducedMotion: reducedMotion.matches }, point => this.projectBodyPoint(point));
         // Blinking
         this.blinkTimer--;
         if (this.blinkTimer <= 0) {
@@ -405,87 +459,46 @@ class Slime {
         }
     }
 
+    projectBodyPoint(point) {
+        // Trace from inside the clear collider to each outline point. Contact
+        // flattens only that part of the skin, including under a low ceiling.
+        const originY = -this.height / 2;
+        const count = Math.max(1, Math.ceil(Math.hypot(point.x, point.y - originY) / 2));
+        let previous = { x: 0, y: originY };
+        for (let i = 1; i <= count; i++) {
+            const t = i / count;
+            const next = { x: point.x * t, y: originY + (point.y - originY) * t };
+            if (isSolid(Math.floor((this.centerX + next.x) / TILE_SIZE), Math.floor((this.bottom + next.y) / TILE_SIZE))) return previous;
+            previous = next;
+        }
+        return point;
+    }
+
     // ── Draw ─────────────────────────────────────────────────
 
     draw() {
         if (!this.alive) return;
 
-        // Calculate visual (drawn) dimensions — slightly larger than collision box
-        const scale = this.shrunk ? 0.65 : 1;
-        const drawW = SLIME_W * 1.2 * scale;
-        const drawH = SLIME_H * 1.2 * scale;
-        const drawX = this.x + this.width / 2 - drawW / 2;
-        const drawY = this.bottom - drawH;
-
-        const sx = drawX - camera.x;
-        const sy = drawY - camera.y;
-
         ctx.save();
-
-        // Glow under slime
-        const glowGrad = ctx.createRadialGradient(
-            sx + drawW / 2, sy + drawH, 2,
-            sx + drawW / 2, sy + drawH, drawW * 0.6
-        );
-        glowGrad.addColorStop(0, this.colorGlow);
-        glowGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = glowGrad;
-        ctx.fillRect(sx - drawW, sy, drawW * 3, drawH * 1.5);
-
-        this.drawBody(ctx, sx, sy, drawW, drawH);
-        this.drawEyes(ctx, sx, sy, drawW, drawH);
-
+        ctx.translate(this.centerX - camera.x, this.bottom - camera.y);
+        // A small contact shadow gives the soft body weight on the floor.
+        if (this.grounded) {
+            ctx.fillStyle = this.colorGlow;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, this.width * 0.58, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        this.drawBody(ctx);
         ctx.restore();
     }
 
-    drawBody(ctx, sx, sy, drawW, drawH) {
-        const cx = sx + drawW / 2;
-        const cy = sy + drawH * 0.45;
-        const rx = drawW / 2;
-        const ry = drawH / 2;
-
-        const N = 10;
-        const pts = [];
-
-        for (let i = 0; i < N; i++) {
-            const angle = (i / N) * Math.PI * 2 - Math.PI / 2;
-            let rad = 1;
-
-            // Flatten bottom
-            const sinA = Math.sin(angle);
-            if (sinA > 0.2) rad -= (sinA - 0.2) * 0.12;
-
-            // Wobble
-            rad += Math.sin(this.wobblePhase + i * 1.2) * 0.035;
-
-            // Crawl wave
-            if (Math.abs(this.vx) > 0.5) {
-                rad += Math.sin(this.moveAnim + i * 0.8) * 0.04;
-            }
-
-            // Idle breath
-            rad += Math.sin(frameCount * 0.025 + i) * 0.015;
-
-            pts.push({
-                x: cx + Math.cos(angle) * rx * rad * this.squashX,
-                y: cy + Math.sin(angle) * ry * rad * this.squashY
-            });
-        }
-
-        // Draw smooth blob with quadratic bezier through midpoints
-        ctx.beginPath();
-        const last = pts[N - 1];
-        ctx.moveTo((last.x + pts[0].x) / 2, (last.y + pts[0].y) / 2);
-        for (let i = 0; i < N; i++) {
-            const next = pts[(i + 1) % N];
-            ctx.quadraticCurveTo(
-                pts[i].x, pts[i].y,
-                (pts[i].x + next.x) / 2,
-                (pts[i].y + next.y) / 2
-            );
-        }
-        ctx.closePath();
-
+    drawBody(ctx) {
+        const pts = this.body.points;
+        const left = Math.min(...pts.map(p => p.x)), right = Math.max(...pts.map(p => p.x));
+        const top = Math.min(...pts.map(p => p.y)), bottom = Math.max(...pts.map(p => p.y));
+        const cx = (left + right) / 2, cy = (top + bottom) / 2;
+        const rx = Math.max(1, (right - left) / 2), ry = Math.max(1, (bottom - top) / 2);
+        this.body.trace(ctx);
         // Gradient fill
         const grad = ctx.createRadialGradient(
             cx - rx * 0.2, cy - ry * 0.3, 2,
@@ -497,70 +510,54 @@ class Slime {
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Outer glow stroke
+        // Keep the rim inside the body so it does not bleed through a wall.
         ctx.save();
-        ctx.shadowColor = this.colorGlow;
-        ctx.shadowBlur = 14;
-        ctx.strokeStyle = this.colorBase;
-        ctx.lineWidth = 1.5;
+        ctx.clip();
+        ctx.strokeStyle = this.colorLight;
+        ctx.lineWidth = 2.5;
         ctx.stroke();
-        ctx.restore();
-
-        // Glossy highlight
         ctx.beginPath();
-        ctx.ellipse(
-            cx - rx * 0.18, cy - ry * 0.3,
-            rx * 0.3, ry * 0.14,
-            -0.2, 0, Math.PI * 2
-        );
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.ellipse(cx - rx * 0.23, cy - ry * 0.42, rx * 0.34, ry * 0.16, -0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
         ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + rx * 0.49, cy + ry * 0.25, rx * 0.09, ry * 0.11, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fill();
+        this.drawEyes(ctx, cx, top + (bottom - top) * 0.46, rx, ry);
+        ctx.restore();
     }
 
-    drawEyes(ctx, sx, sy, drawW, drawH) {
-        const cx = sx + drawW / 2;
-        const cy = sy + drawH * 0.3;
-        const spacing = drawW * 0.2 * this.squashX;
-        const eyeW = drawW * 0.15;
-        const eyeH = drawH * 0.2;
-        const blinkY = this.isBlinking ? 0.08 : 1;
-
+    drawEyes(ctx, cx, cy, rx, ry) {
+        const eyeW = Math.min(5.2, rx * 0.26);
+        const eyeH = Math.min(7.2, ry * 0.42);
+        const blink = this.isBlinking ? 0.1 : 1;
+        const faceX = cx + this.body.faceX;
         for (const side of [-1, 1]) {
-            const ex = cx + side * spacing;
-            const ey = cy;
-
-            // Sclera
+            const ex = faceX + side * rx * 0.38;
             ctx.beginPath();
-            ctx.ellipse(ex, ey, eyeW * this.squashX, eyeH * blinkY * this.squashY, 0, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff';
+            ctx.ellipse(ex, cy, eyeW, eyeH * blink, this.gripping ? this.wallSide * 0.12 : 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff7ff';
             ctx.fill();
-            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-
             if (!this.isBlinking) {
-                // Pupil
-                const lookX = this.facing * eyeW * 0.25 + this.vx * 0.3;
-                const lookY = Math.max(-eyeH * 0.2, Math.min(eyeH * 0.15, this.vy * 0.3));
-                const px = ex + Math.max(-eyeW * 0.35, Math.min(eyeW * 0.35, lookX));
-                const py = ey + lookY;
-
+                const px = ex + this.facing * eyeW * 0.22;
+                const py = cy + Math.max(-1.5, Math.min(1.5, this.vy * 0.16));
                 ctx.beginPath();
-                ctx.ellipse(px, py, eyeW * 0.5, eyeH * 0.55, 0, 0, Math.PI * 2);
-                ctx.fillStyle = '#1a1a2e';
+                ctx.ellipse(px, py, eyeW * 0.5, eyeH * 0.65, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#27173c';
                 ctx.fill();
-
-                // Highlight
                 ctx.beginPath();
-                ctx.ellipse(
-                    px - eyeW * 0.15, py - eyeH * 0.2,
-                    eyeW * 0.16, eyeH * 0.16,
-                    0, 0, Math.PI * 2
-                );
-                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.arc(px - 0.7, py - 1.2, Math.min(1.3, eyeW * 0.22), 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
                 ctx.fill();
             }
         }
+        // The mouth and eyes follow the same lagging center of mass.
+        ctx.beginPath();
+        ctx.arc(faceX, cy + eyeH * 0.85, Math.min(2.3, ry * 0.15), 0.1, Math.PI - 0.1);
+        ctx.strokeStyle = this.colorDark;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
     }
 }
 
@@ -954,6 +951,7 @@ function drawHints() {
     if (!levelData || !levelData.hints) return;
 
     for (const hint of levelData.hints) {
+        const text = hint.text.replace(/Shrink/gi, 'Squeeze');
         const hintPixelX = hint.col * TILE_SIZE + TILE_SIZE / 2;
         const hintPixelY = 11 * TILE_SIZE;
 
@@ -978,7 +976,7 @@ function drawHints() {
 
         // Measure text
         ctx.font = '12px Orbitron, sans-serif';
-        const tw = ctx.measureText(hint.text).width + 20;
+        const tw = ctx.measureText(text).width + 20;
 
         // Background pill
         ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
@@ -993,7 +991,7 @@ function drawHints() {
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(hint.text, sx, sy + bob);
+        ctx.fillText(text, sx, sy + bob);
 
         ctx.restore();
     }
@@ -1149,7 +1147,7 @@ function checkRevivalFlags() {
         const dy = Math.abs(alivePlayer.bottom - rfy);
 
         if (dx < 28 && dy < 36) {
-            deadPlayer.respawn(rfx, rfy - deadPlayer.height);
+            deadPlayer.respawn(rfx, rfy - SLIME_H);
             break;
         }
     }
@@ -1224,13 +1222,15 @@ function render() {
     ctx.restore();
 }
 
-function gameLoop() {
+function gameLoop(timestamp) {
+    physicsClock.advance(timestamp, () => {
+        if (state === 'PLAYING') update();
+        else frameCount++;
+    });
     if (state === 'PLAYING') {
-        update();
         render();
     } else {
         // Animate background behind overlays
-        frameCount++;
         ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
         drawBackground();
 
@@ -1297,6 +1297,7 @@ function drawMenuSlime() {
 
 function setState(newState) {
     state = newState;
+    clearInput();
 
     // Hide all overlays
     menuOverlay.classList.add('hidden');
@@ -1384,8 +1385,8 @@ function startLevel(index) {
     }
 
     // Initial camera position
-    camera.x = Math.max(0, players[0].centerX - CANVAS_W / 2);
-    camera.y = Math.max(0, players[0].centerY - CANVAS_H / 2);
+    camera.x = Math.max(0, Math.min(players[0].centerX - CANVAS_W / 2, levelData.width * TILE_SIZE - CANVAS_W));
+    camera.y = Math.max(0, Math.min(players[0].centerY - CANVAS_H / 2, levelData.height * TILE_SIZE - CANVAS_H));
 
     setState('PLAYING');
 }
