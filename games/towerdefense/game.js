@@ -38,12 +38,19 @@ function gameLoop(now) {
   let dt = now - lastTime; lastTime = now;
   dt = Math.min(dt, 100);
   if(G && G.phase==='wave' && !G.paused) update(dt * G.speed);
+  if(G && !G.paused) {
+    G.visualTime = (G.visualTime || 0) + dt;
+    if(G.phase === 'build') updateParticles(dt);
+    G.remnants = (G.remnants || []).filter(m => { m.fade -= dt; return m.fade > 0; });
+    G.effects = (G.effects || []).filter(f => { f.life -= dt; return f.life > 0; });
+  }
   renderFrame();
 }
 
 // ── Level initialisation ──────────────────────────────────────────────────
 function startLevel(idx) {
   const lvl = LEVELS[idx];
+  const campaignStart = G ? G.campaignStart : idx;
 
   const bossTypes = ['dragon','lichking','demonlord'];
   const bossType  = idx===2 ? bossTypes[Math.floor(Math.random()*3)] : null;
@@ -51,6 +58,11 @@ function startLevel(idx) {
   G = {
     phase:             'build',
     paused:            false,
+    campaignStart,
+    visualTime:        0,
+    remnants:          [],
+    effects:           [],
+    touchMode:         Boolean(window.matchMedia?.('(pointer: coarse)').matches),
     levelIdx:          idx,
     waveIdx:           0,
     lives:             lvl.lives,
@@ -76,8 +88,10 @@ function startLevel(idx) {
   G.screenWPs = lvl.waypoints.map(([c,r]) => gridCenter(c,r));
 
   updateOffsets();
+  resetCamera();
   hideOverlay();
   updateHUD();
+  Sound.sync(true);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────
@@ -141,7 +155,7 @@ function spawnMonster(type) {
     wpIdx:     1,
     distTraveled:0,
     frame:0, frameTimer:0,
-    effects:{ slowTimer:0, freezeTimer:0, burnTimer:0, burnDps:0 },
+    effects:{ slowTimer:0, freezeTimer:0, freezeRecovery:0, burnTimer:0, burnDps:0 },
     dead:false, reachedEnd:false,
     summonTimer: (isBoss&&bossType==='lichking')?10000:0,
     spCrossed:[false,false,false],
@@ -158,9 +172,14 @@ function updateMonsters(dt) {
     if(m.dead||m.reachedEnd) continue;
 
     let speedMult=1;
+    m.hitTimer = Math.max(0, (m.hitTimer || 0) - dt);
+    m.effects.freezeRecovery = Math.max(0, (m.effects.freezeRecovery || 0) - dt);
 
     // Freeze
-    if(m.effects.freezeTimer>0 && !m.immune.freeze) { m.effects.freezeTimer-=dt; speedMult=0; }
+    if(m.effects.freezeTimer>0 && !m.immune.freeze) {
+      m.effects.freezeTimer-=dt; speedMult=0;
+      if(m.effects.freezeTimer<=0) m.effects.freezeRecovery = 1200;
+    }
 
     // Slow (only if not frozen)
     if(speedMult>0 && m.effects.slowTimer>0 && !m.immune.slow) { m.effects.slowTimer-=dt; speedMult=0.5; }
@@ -193,10 +212,16 @@ function updateMonsters(dt) {
 
     // Movement
     if(speedMult===0) continue;
-    if(m.wpIdx>=G.screenWPs.length) { m.reachedEnd=true; G.lives = m.isBoss ? 0 : Math.max(0, G.lives - 1); updateHUD(); continue; }
+    if(m.wpIdx>=G.screenWPs.length) {
+      m.reachedEnd=true; G.lives = m.isBoss ? 0 : Math.max(0, G.lives - 1);
+      if(m.isBoss) G.bossEscaped = true;
+      G.crystalFlash = G.visualTime;
+      Sound.play('leak'); updateHUD(); continue;
+    }
 
     const wp=G.screenWPs[m.wpIdx];
     const dx=wp.x-m.x, dy=wp.y-m.y;
+    m.facing = dx >= 0 ? 1 : -1;
     const dist=Math.sqrt(dx*dx+dy*dy);
     const move=m.speed*speedMult*(dt/1000);
 
@@ -212,6 +237,7 @@ function updateMonsters(dt) {
 function killMonster(m) {
   if(m.dead || m.reachedEnd) return;
   m.dead=true;
+  G.remnants.push({...m, fade:350});
   G.gold+=m.reward;
   G.killScore = (G.killScore || 0) + m.reward;
   spawnParticles(m.x, m.y, m.isBoss?'#ffd700':'#aaffaa', m.isBoss?20:6);
@@ -240,6 +266,7 @@ function summonLichMinions(lich) {
 // ── Tower update ──────────────────────────────────────────────────────────
 function updateTowers(dt) {
   for(const tower of G.towers) {
+    tower.shot = Math.max(0, (tower.shot || 0) - dt);
     tower.cooldown=Math.max(0, tower.cooldown-dt);
     if(tower.cooldown>0) continue;
 
@@ -253,14 +280,19 @@ function updateTowers(dt) {
     for(const m of G.monsters) {
       if(m.dead||m.reachedEnd) continue;
       const dx=m.x-pos.x, dy=m.y-pos.y;
-      if(dx*dx+dy*dy<=scaledRange*scaledRange && m.distTraveled>bestDist) { best=m; bestDist=m.distTraveled; }
+      const rank = tower.priority === 'strongest' ? m.hp : tower.priority === 'fastest' ? m.speed : m.distTraveled;
+      if(dx*dx+dy*dy<=scaledRange*scaledRange && (!best || rank>bestDist)) { best=m; bestDist=rank; }
     }
     if(!best) continue;
 
     tower.cooldown = 1000/stats.fireRate;
+    tower.aim = Math.atan2(best.y-pos.y, best.x-pos.x);
+    tower.shot = 180;
+    Sound.play(tower.type);
     G.projectiles.push({
       id:        G.idCount++,
-      x:         pos.x, y:pos.y-18,
+      x:         pos.x, y:pos.y-42,
+      startX:    pos.x, startY:pos.y-42,
       targetId:  best.id,
       towerType: tower.type,
       damage:    stats.damage,
@@ -285,6 +317,7 @@ function updateProjectiles(dt) {
 
     if(dist<=move+1) {
       proj.dead=true;
+      G.effects.push({x:target.x,y:target.y-12,type:proj.towerType,life:250,maxLife:250,radius:proj.splashR || 16});
       // splash
       if(proj.splashR>0) {
         for(const m of G.monsters) {
@@ -305,13 +338,15 @@ function updateProjectiles(dt) {
 function applyDamage(m, proj) {
   if(m.dead || m.reachedEnd) return;
   if(m.dodge>0 && Math.random()<m.dodge) return;
-  const dmg=Math.max(1, proj.damage-m.armor);
+  const dmg=Math.max(1, proj.damage-(proj.towerType === 'magic' ? 0 : m.armor));
   m.hp-=dmg;
+  m.hitTimer = 100;
+  Sound.play('hit');
 
   const ef=proj.effect;
   if(ef) {
     if(ef.slow   && !m.immune.slow)   m.effects.slowTimer  =Math.max(m.effects.slowTimer,  ef.slow);
-    if(ef.freeze && !m.immune.freeze) m.effects.freezeTimer=Math.max(m.effects.freezeTimer,ef.freeze);
+    if(ef.freeze && !m.immune.freeze && !(m.effects.freezeRecovery>0) && !(m.effects.freezeTimer>0)) m.effects.freezeTimer=ef.freeze;
     if(ef.burn   && !m.immune.burn)   { m.effects.burnTimer=Math.max(m.effects.burnTimer,ef.burn.duration); m.effects.burnDps=ef.burn.dps; }
   }
   if(m.hp<=0) killMonster(m);
@@ -335,7 +370,7 @@ function updateParticles(dt) {
 
 // ── Wave / level flow ─────────────────────────────────────────────────────
 function onStartWave() {
-  if(!G || G.phase!=='build') return;
+  if(!G || G.paused || G.phase!=='build') return;
   const lvl=LEVELS[G.levelIdx];
   if(G.waveIdx>=lvl.waves.length) return;
 
@@ -355,10 +390,11 @@ function onStartWave() {
   }));
 
   updateHUD();
+  Sound.play('wave');
 }
 
 function onToggleSpeed() {
-  if(!G) return;
+  if(!G || G.paused) return;
   G.speed = G.speed===1 ? 2 : 1;
   updateHUD();
 }
@@ -381,21 +417,34 @@ function onWaveComplete() {
 
 // ── Tower placement ───────────────────────────────────────────────────────
 function placeTower(col, row) {
-  const lvl=LEVELS[G.levelIdx];
-  if(col<0||col>=COLS||row<0||row>=ROWS) return;
-  if(lvl.map[row][col]!==T_GRASS) return;
-  if(G.towers.find(t=>t.col===col&&t.row===row)) return;
+  if(!G || G.paused || !['build','wave'].includes(G.phase) || !G.selectedTowerType) return false;
+  const error = placementError(col,row);
+  if(error) { notifyPlayer(error); return false; }
 
   const def=TOWER_DEFS[G.selectedTowerType];
   const cost=def.levels[0].cost;
   if(G.gold<cost) return;
 
   G.gold-=cost;
-  G.towers.push({ id:G.idCount++, type:G.selectedTowerType, col, row, level:0, cooldown:0 });
+  G.towers.push({ id:G.idCount++, type:G.selectedTowerType, col, row, level:0, cooldown:0, priority:'first', aim:-.5, shot:0, builtAt:G.visualTime });
+  G.pendingTile = null;
+  Sound.play('build');
   updateHUD();
+  return true;
+}
+
+function placementError(col,row) {
+  if(col<0 || col>=COLS || row<0 || row>=ROWS) return 'Choose a tile inside the realm.';
+  const tile = LEVELS[G.levelIdx].map[row][col];
+  if(tile === T_PATH) return 'Keep the enemy path clear.';
+  if(tile !== T_GRASS) return 'Build on open meadow, away from trees, water and rocks.';
+  if(G.towers.some(t => t.col === col && t.row === row)) return 'A tower already guards this tile.';
+  if(G.selectedTowerType && G.gold < TOWER_DEFS[G.selectedTowerType].levels[0].cost) return `Need ${TOWER_DEFS[G.selectedTowerType].levels[0].cost-G.gold} more gold.`;
+  return '';
 }
 
 function upgradeTower() {
+  if(!G || G.paused || !['build','wave'].includes(G.phase)) return;
   const t=G.inspectedTower;
   if(!t||t.level>=2) return;
   const def=TOWER_DEFS[t.type];
@@ -403,15 +452,18 @@ function upgradeTower() {
   if(G.gold<cost) return;
   G.gold-=cost;
   t.level++;
+  Sound.play('upgrade');
   updateHUD();
 }
 
 function sellTower() {
+  if(!G || G.paused || !['build','wave'].includes(G.phase)) return;
   const t=G.inspectedTower;
   if(!t) return;
   G.gold+=towerSellValue(t);
   G.towers=G.towers.filter(x=>x.id!==t.id);
   G.inspectedTower=null;
+  Sound.play('sell');
   updateHUD();
 }
 
@@ -424,13 +476,17 @@ function towerSellValue(tower) {
 
 // ── Input handlers ────────────────────────────────────────────────────────
 function onCanvasClick(e) {
-  if(!G || G.phase==='gameover'||G.phase==='levelcomplete'||G.phase==='menu') return;
+  if(suppressCanvasClick) { suppressCanvasClick = false; return; }
+  if(!G || G.paused || !['build','wave'].includes(G.phase)) return;
   const rect=canvas.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const {col,row}=screenToGrid(mx,my);
 
   if(G.selectedTowerType) {
-    placeTower(col,row);
+    G.hoverCell = {col,row};
+    if(G.touchMode && (!G.pendingTile || G.pendingTile.col !== col || G.pendingTile.row !== row)) {
+      G.pendingTile = {col,row}; renderTowerInfo();
+    } else placeTower(col,row);
   } else {
     // Inspect tower
     const found=G.towers.find(t=>t.col===col&&t.row===row);
@@ -440,7 +496,7 @@ function onCanvasClick(e) {
 }
 
 function onRightClick(e) {
-  if(!G) return;
+  if(!G || G.paused || !['build','wave'].includes(G.phase)) return;
   const rect=canvas.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const {col,row}=screenToGrid(mx,my);
@@ -455,9 +511,11 @@ function onRightClick(e) {
 }
 
 function onMouseMove(e) {
-  if(!G) return;
+  if(!G || G.paused || G.touchMode || cameraDrag?.dragging) return;
   const rect=canvas.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const {col,row}=screenToGrid(mx,my);
+  const prev = G.hoverCell;
   G.hoverCell=(col>=0&&col<COLS&&row>=0&&row<ROWS)?{col,row}:null;
+  if(G.selectedTowerType && (prev?.col !== G.hoverCell?.col || prev?.row !== G.hoverCell?.row)) renderTowerInfo();
 }

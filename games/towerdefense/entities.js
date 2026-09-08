@@ -16,7 +16,7 @@ const TOWER_DEFS = {
   },
   magic: {
     name: 'Magic Tower', icon: '🔮', color: '#9b44cc',
-    desc: 'Slows enemies on hit.',
+    desc: 'Pierces armor and slows enemies for 2 seconds.',
     projectileColor: '#cc44ff', projectileSize: 5, projectileSpeed: 260,
     effect: { slow: 2000 },
     levels: [
@@ -38,7 +38,7 @@ const TOWER_DEFS = {
   },
   ice: {
     name: 'Ice Tower', icon: '❄️', color: '#60a8c0',
-    desc: 'Freezes enemies solid.',
+    desc: 'Freezes enemies for 1.5 seconds. They briefly resist freezing afterward.',
     projectileColor: '#88ddff', projectileSize: 4, projectileSpeed: 270,
     effect: { freeze: 1500 },
     levels: [
@@ -74,237 +74,10 @@ const BOSS_DEFS = {
   demonlord: { name: 'Demon Lord', hp: 7000, speed: 60, reward: 500, armor: 10, dodge: 0.05, regen: 0, scale: 2.7, immune: { freeze: true }, speedBonus: 15, desc: 'Immune to Freeze — grows faster as HP drops' },
 };
 
-// ── Drawing helpers ────────────────────────────────────────────────────────
-function _fill(ctx, color) { ctx.fillStyle = color; }
-function _circ(ctx, x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
-function _ellipse(ctx, x, y, rx, ry, rot) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2); ctx.fill(); }
-// Tile scale factor relative to the base 48px tile width
-function scaleT() { return (typeof DTW !== 'undefined' ? DTW : 48) / 48; }
-
-// ── Isometric box (placed on tile whose bounding-box top-left is bx,by) ──
-function drawIsoBox(ctx, bx, by, h, top, left, right) {
-  // Use dynamic tile half-widths from renderer.js (DHW/DHH/DTW/DTH)
-  const hw = typeof DHW !== 'undefined' ? DHW : HALF_W;
-  const hh = typeof DHH !== 'undefined' ? DHH : HALF_H;
-  const tw = typeof DTW !== 'undefined' ? DTW : TW;
-  const th = typeof DTH !== 'undefined' ? DTH : TH;
-
-  // left face
-  ctx.fillStyle = left;
-  ctx.beginPath();
-  ctx.moveTo(bx, by + hh - h);
-  ctx.lineTo(bx + hw, by + th - h);
-  ctx.lineTo(bx + hw, by + th);
-  ctx.lineTo(bx, by + hh);
-  ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.6; ctx.stroke();
-
-  // right face
-  ctx.fillStyle = right;
-  ctx.beginPath();
-  ctx.moveTo(bx + hw, by + th - h);
-  ctx.lineTo(bx + tw, by + hh - h);
-  ctx.lineTo(bx + tw, by + hh);
-  ctx.lineTo(bx + hw, by + th);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-
-  // top face
-  ctx.fillStyle = top;
-  ctx.beginPath();
-  ctx.moveTo(bx + hw, by - h);
-  ctx.lineTo(bx + tw, by + hh - h);
-  ctx.lineTo(bx + hw, by + th - h);
-  ctx.lineTo(bx, by + hh - h);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-}
-
-
-// ── Tower draw dispatcher ──────────────────────────────────────────────────
-function drawTower(ctx, bx, by, type, lvl) {
-  const sc = scaleT();
-  const baseH = ([26, 32, 28, 34, 40][TOWER_ORDER.indexOf(type)] + lvl * 8) * sc;
-  ctx.lineWidth = 0.6;
-  switch (type) {
-    case 'archer': _drawArcher(ctx, bx, by, baseH, lvl, sc); break;
-    case 'magic': _drawMagic(ctx, bx, by, baseH, lvl, sc); break;
-    case 'cannon': _drawCannon(ctx, bx, by, baseH, lvl, sc); break;
-    case 'ice': _drawIce(ctx, bx, by, baseH, lvl, sc); break;
-    case 'dragon': _drawDragon(ctx, bx, by, baseH, lvl, sc); break;
-  }
-}
-
-function _drawArcher(ctx, bx, by, h, lvl, sc = 1) {
-  const hw = typeof DHW !== 'undefined' ? DHW : HALF_W, tw = typeof DTW !== 'undefined' ? DTW : TW;
-  drawIsoBox(ctx, bx, by, h, '#9e9e9e', '#6e6e6e', '#565656');
-  const topY = by - h, cx = bx + hw;
-  ctx.fillStyle = '#888';
-  for (let i = 0; i < 3; i++) ctx.fillRect(bx + 5 * sc + i * 14 * sc, topY - 7 * sc, 9 * sc, 7 * sc);
-  ctx.fillStyle = '#222'; ctx.fillRect(bx + hw + 4 * sc, by + (typeof DHH !== 'undefined' ? DHH : HALF_H) - h * 0.55, 5 * sc, 9 * sc);
-  ctx.fillStyle = '#7a4a1a'; _circ(ctx, cx, topY - 5 * sc, 3.5 * sc);
-  ctx.fillRect(cx - 1.5 * sc, topY - 2 * sc, 3 * sc, 7 * sc);
-  if (lvl >= 1) { ctx.fillStyle = '#c0a060'; ctx.fillRect(bx + 2 * sc, topY, 4 * sc, 4 * sc); ctx.fillRect(bx + tw - 6 * sc, topY, 4 * sc, 4 * sc); }
-}
-
-function _drawMagic(ctx, bx, by, h, lvl, sc = 1) {
-  const hw = typeof DHW !== 'undefined' ? DHW : HALF_W;
-  drawIsoBox(ctx, bx, by, h, '#7b2d8b', '#5b1f6b', '#4a1660');
-  const topY = by - h, cx = bx + hw;
-  const r1 = 8 * sc, r2 = 4 * sc, pts = 5;
-  ctx.fillStyle = lvl >= 1 ? '#e088ff' : '#cc44ff';
-  ctx.shadowBlur = 12; ctx.shadowColor = '#cc44ff';
-  ctx.beginPath();
-  for (let i = 0; i < pts * 2; i++) {
-    const r = i % 2 === 0 ? r1 : r2, a = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
-    i === 0 ? ctx.moveTo(cx + r * Math.cos(a), topY - 2 * sc + r * Math.sin(a)) : ctx.lineTo(cx + r * Math.cos(a), topY - 2 * sc + r * Math.sin(a));
-  }
-  ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(204,68,255,0.4)'; ctx.fillRect(bx + hw + 4 * sc, by + (typeof DHH !== 'undefined' ? DHH : HALF_H) - h * 0.65, 8 * sc, 10 * sc);
-}
-
-function _drawCannon(ctx, bx, by, h, lvl, sc = 1) {
-  const hw = typeof DHW !== 'undefined' ? DHW : HALF_W, hh = typeof DHH !== 'undefined' ? DHH : HALF_H;
-  drawIsoBox(ctx, bx, by, h, '#555', '#333', '#282828');
-  const topY = by - h, cx = bx + hw;
-  ctx.fillStyle = '#777';[[-9, 0], [9, 0], [0, -9], [0, 9]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.arc(cx + dx * sc, topY + dy * sc, 2.5 * sc, 0, Math.PI * 2); ctx.fill(); });
-  ctx.fillStyle = '#111'; ctx.fillRect(bx + hw + 2 * sc, by + hh - h * 0.52 - 2 * sc, (typeof DTW !== 'undefined' ? DTW : TW) / 2, 6 * sc);
-  ctx.fillStyle = '#222'; _ellipse(ctx, bx + (typeof DTW !== 'undefined' ? DTW : TW) - 4 * sc, by + hh - h * 0.52 + 1 * sc, 6 * sc, 3 * sc, Math.PI / 8);
-  if (lvl >= 2) { ctx.fillStyle = '#111'; ctx.fillRect(bx + hw + 2 * sc, by + hh - h * 0.52 + 6 * sc, (typeof DTW !== 'undefined' ? DTW : TW) / 2, 5 * sc); }
-}
-
-function _drawIce(ctx, bx, by, h, lvl, sc = 1) {
-  const hw = typeof DHW !== 'undefined' ? DHW : HALF_W, hh = typeof DHH !== 'undefined' ? DHH : HALF_H;
-  drawIsoBox(ctx, bx, by, h, '#a8d8ea', '#68a8c0', '#4e90b0');
-  const topY = by - h, cx = bx + hw;
-  const count = lvl >= 1 ? 4 : 3;
-  for (let i = 0; i < count; i++) {
-    const ix = cx - ((count - 1) * 4 * sc) + i * 8 * sc, len = (10 + i % 2 * 5) * sc;
-    ctx.fillStyle = '#cceeff';
-    ctx.beginPath(); ctx.moveTo(ix - 2 * sc, topY); ctx.lineTo(ix + 2 * sc, topY); ctx.lineTo(ix, topY - len); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath(); ctx.moveTo(ix - 1 * sc, topY); ctx.lineTo(ix, topY); ctx.lineTo(ix, topY - len + 3 * sc); ctx.closePath(); ctx.fill();
-  }
-  ctx.fillStyle = 'rgba(136,221,255,0.4)'; ctx.fillRect(bx + hw + 4 * sc, by + hh - h * 0.6, 8 * sc, 12 * sc);
-}
-
-function _drawDragon(ctx, bx, by, h, lvl, sc = 1) {
-  const hw = typeof DHW !== 'undefined' ? DHW : HALF_W;
-  drawIsoBox(ctx, bx, by, h, '#6b1515', '#4a0e0e', '#3d0808');
-  const topY = by - h, cx = bx + hw;
-  ctx.strokeStyle = '#cc3300'; ctx.lineWidth = 3 * sc;
-  ctx.beginPath(); ctx.moveTo(cx - 12 * sc, topY); ctx.lineTo(cx + 12 * sc, topY); ctx.stroke();
-  ctx.lineWidth = 2 * sc;
-  ctx.beginPath(); ctx.moveTo(cx - 7 * sc, topY); ctx.lineTo(cx - 7 * sc, topY - 10 * sc); ctx.moveTo(cx + 7 * sc, topY); ctx.lineTo(cx + 7 * sc, topY - 10 * sc); ctx.stroke();
-  ctx.fillStyle = '#cc3300'; _circ(ctx, cx, topY - 13 * sc, 6 * sc);
-  ctx.beginPath(); ctx.moveTo(cx, topY - 11 * sc); ctx.quadraticCurveTo(cx - 18 * sc, topY - 22 * sc, cx - 13 * sc, topY - 5 * sc); ctx.quadraticCurveTo(cx - 8 * sc, topY - 13 * sc, cx, topY - 11 * sc); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx, topY - 11 * sc); ctx.quadraticCurveTo(cx + 18 * sc, topY - 22 * sc, cx + 13 * sc, topY - 5 * sc); ctx.quadraticCurveTo(cx + 8 * sc, topY - 13 * sc, cx, topY - 11 * sc); ctx.fill();
-  if (lvl >= 1) { ctx.shadowBlur = 12; ctx.shadowColor = '#ff6600'; ctx.fillStyle = '#ff4400'; _circ(ctx, cx, topY - 13 * sc, 3.5 * sc); ctx.shadowBlur = 0; }
-}
-
-
-// ── Monster drawing ────────────────────────────────────────────────────────
-function drawMonster(ctx, monster) {
-  const { x, y, type, isBoss, bossType, frame, effects, hp, maxHp, scale: s } = monster;
-  ctx.save(); ctx.translate(x, y);
-  if (isBoss) _drawBoss(ctx, bossType, frame, effects, s);
-  else {
-    switch (type) {
-      case 'goblin': _drawGoblin(ctx, frame, effects, s); break;
-      case 'orc': _drawOrc(ctx, frame, effects, s); break;
-      case 'darkelf': _drawDarkElf(ctx, frame, effects, s); break;
-      case 'troll': _drawTroll(ctx, frame, effects, s); break;
-    }
-  }
-  ctx.restore();
-  _drawHPBar(ctx, x, y, hp, maxHp, s, isBoss);
-}
-
-function _frozeColor(base, freeze) { return freeze > 0 ? '#aaddff' : base; }
-function _burnAura(ctx, freeze, burn, rx, ry) {
-  if (freeze > 0 || burn <= 0) return;
-  ctx.globalAlpha = 0.45 + 0.2 * Math.sin(Date.now() * 0.012);
-  ctx.fillStyle = '#ff7700';
-  _ellipse(ctx, 0, 0, rx, ry); ctx.globalAlpha = 1;
-}
-function _slowAura(ctx, slow) {
-  if (slow <= 0) return;
-  ctx.globalAlpha = 0.28; ctx.fillStyle = '#4488ff';
-  _ellipse(ctx, 0, 0, 12, 15); ctx.globalAlpha = 1;
-}
-
-function _drawGoblin(ctx, fr, ef, s) {
-  const ls = [0, 3, -3][fr] * s, bb = [0, -1, -1][fr] * s, frz = ef.freezeTimer > 0, brn = ef.burnTimer > 0;
-  // shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.25)'; _ellipse(ctx, 0, 2 * s, 8 * s, 3 * s);
-  // legs
-  ctx.fillStyle = frz ? '#5588bb' : '#1a5c2a';
-  ctx.fillRect(-6 * s + ls, (-2 + bb / s) * s, 4 * s, 7 * s); ctx.fillRect(2 * s - ls, (-2 + bb / s) * s, 4 * s, 7 * s);
-  // boots
-  ctx.fillStyle = '#2a2a2a'; ctx.fillRect(-7 * s + ls, 5 * s, 5 * s, 3 * s); ctx.fillRect(1 * s - ls, 5 * s, 5 * s, 3 * s);
-  // body
-  _fill(ctx, frz ? '#7bb8e0' : brn ? '#bb4400' : '#2ea04d'); _ellipse(ctx, 0, -9 * s, 7 * s, 9 * s);
-  // head
-  _fill(ctx, frz ? '#9bd4f0' : '#3dba5a'); _circ(ctx, 0, -20 * s, 6 * s);
-  // ears
-  _fill(ctx, frz ? '#9bd4f0' : '#3dba5a');
-  ctx.beginPath(); ctx.moveTo(-6 * s, -23 * s); ctx.lineTo(-10 * s, -18 * s); ctx.lineTo(-3 * s, -20 * s); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(6 * s, -23 * s); ctx.lineTo(10 * s, -18 * s); ctx.lineTo(3 * s, -20 * s); ctx.closePath(); ctx.fill();
-  // eyes
-  _fill(ctx, frz ? '#aaccff' : '#ff2200'); ctx.fillRect(-4 * s, -22 * s, 2 * s, 2 * s); ctx.fillRect(2 * s, -22 * s, 2 * s, 2 * s);
-  _burnAura(ctx, ef.freezeTimer, ef.burnTimer, 8 * s, 12 * s); _slowAura(ctx, ef.slowTimer);
-}
-
-function _drawOrc(ctx, fr, ef, s) {
-  const ls = [0, 4, -4][fr] * s, bl = [0, -2, 2][fr] * s, frz = ef.freezeTimer > 0, brn = ef.burnTimer > 0;
-  ctx.fillStyle = 'rgba(0,0,0,0.3)'; _ellipse(ctx, 0, 2 * s, 13 * s, 4 * s);
-  ctx.fillStyle = frz ? '#3366aa' : '#3a5266';
-  ctx.fillRect(-9 * s + ls, -2 * s, 7 * s, 9 * s); ctx.fillRect(2 * s - ls, -2 * s, 7 * s, 9 * s);
-  ctx.fillStyle = '#555'; ctx.fillRect(-10 * s + ls, 7 * s, 8 * s, 4 * s); ctx.fillRect(1 * s - ls, 7 * s, 8 * s, 4 * s);
-  _fill(ctx, frz ? '#6699bb' : brn ? '#aa4400' : '#557799'); _ellipse(ctx, bl, -13 * s, 11 * s, 12 * s);
-  ctx.fillStyle = '#8899aa'; ctx.fillRect(-8 * s + bl, -16 * s, 16 * s, 5 * s); // armor
-  ctx.fillStyle = '#4a6688'; ctx.fillRect(-16 * s + bl, -15 * s, 6 * s, 11 * s); ctx.fillRect(10 * s + bl, -15 * s, 6 * s, 11 * s); // arms
-  _fill(ctx, frz ? '#7799cc' : '#4a6680'); _circ(ctx, bl, -26 * s, 9 * s); // head
-  ctx.fillStyle = '#f0e8c0'; ctx.fillRect(-6 * s + bl, -20 * s, 3 * s, 6 * s); ctx.fillRect(3 * s + bl, -20 * s, 3 * s, 6 * s); // tusks
-  _fill(ctx, '#ff2200'); ctx.fillRect(-4 * s + bl, -28 * s, 2 * s, 2 * s); ctx.fillRect(2 * s + bl, -28 * s, 2 * s, 2 * s);
-  _burnAura(ctx, ef.freezeTimer, ef.burnTimer, 12 * s, 16 * s); _slowAura(ctx, ef.slowTimer);
-}
-
-function _drawDarkElf(ctx, fr, ef, s) {
-  const sw = [0, 3, -3][fr] * s, gd = [0, -1, -1][fr] * s, frz = ef.freezeTimer > 0, brn = ef.burnTimer > 0;
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; _ellipse(ctx, 0, gd + 2 * s, 7 * s, 2.5 * s);
-  // cloak
-  _fill(ctx, frz ? '#334455' : '#2a0a4a');
-  ctx.beginPath(); ctx.moveTo(-8 * s + sw, gd - 2 * s); ctx.lineTo(8 * s + sw, gd - 2 * s); ctx.lineTo(10 * s + sw, gd + 9 * s); ctx.lineTo(-10 * s + sw, gd + 9 * s); ctx.closePath(); ctx.fill();
-  // robe body
-  _fill(ctx, frz ? '#557788' : brn ? '#881122' : '#5a1a8a'); _ellipse(ctx, sw, gd - 10 * s, 6 * s, 11 * s);
-  // hood
-  _fill(ctx, frz ? '#334455' : '#1a0535');
-  ctx.beginPath(); ctx.arc(sw, gd - 22 * s, 7 * s, -Math.PI, 0); ctx.fill();
-  _fill(ctx, frz ? '#8899bb' : '#d0a0d8'); _circ(ctx, sw, gd - 22 * s, 5 * s); // face
-  // hood tip
-  ctx.fillStyle = frz ? '#334455' : '#1a0535';
-  ctx.beginPath(); ctx.moveTo(sw - 5 * s, gd - 26 * s); ctx.lineTo(sw + 5 * s, gd - 26 * s); ctx.lineTo(sw, gd - 34 * s); ctx.closePath(); ctx.fill();
-  // eyes
-  ctx.fillStyle = frz ? '#aabbcc' : '#ffe000'; _circ(ctx, sw - 2.5 * s, gd - 23 * s, 1.8 * s); _circ(ctx, sw + 2.5 * s, gd - 23 * s, 1.8 * s);
-  _burnAura(ctx, ef.freezeTimer, ef.burnTimer, 7 * s, 12 * s); _slowAura(ctx, ef.slowTimer);
-}
-
-function _drawTroll(ctx, fr, ef, s) {
-  const ls = [0, 5, -5][fr] * s, sb = [0, -3, 3][fr] * s, frz = ef.freezeTimer > 0, brn = ef.burnTimer > 0;
-  ctx.fillStyle = 'rgba(0,0,0,0.35)'; _ellipse(ctx, 0, 3 * s, 16 * s, 5 * s);
-  ctx.fillStyle = frz ? '#336655' : '#3a5a20';
-  ctx.fillRect(-13 * s + ls, -1 * s, 10 * s, 10 * s); ctx.fillRect(3 * s - ls, -1 * s, 10 * s, 10 * s);
-  ctx.fillStyle = '#2a3f18'; ctx.fillRect(-14 * s + ls, 9 * s, 12 * s, 5 * s); ctx.fillRect(2 * s - ls, 9 * s, 12 * s, 5 * s);
-  _fill(ctx, frz ? '#559977' : brn ? '#7a6520' : '#5a7a32'); _ellipse(ctx, 0, (-15 + sb / s) * s, 14 * s, 14 * s);
-  ctx.fillStyle = '#4a6828'; _ellipse(ctx, -17 * s + sb * 0.5, -10 * s, 5 * s, 10 * s, Math.PI / 5); _ellipse(ctx, 17 * s - sb * 0.5, -10 * s, 5 * s, 10 * s, -Math.PI / 5);
-  ctx.fillStyle = '#3d5820'; _ellipse(ctx, -18 * s, -3 * s, 5 * s, 4 * s); _ellipse(ctx, 18 * s, -3 * s, 5 * s, 4 * s);
-  _fill(ctx, frz ? '#77aa88' : '#6a8a40'); _circ(ctx, 0, (-28 + sb / s) * s, 10 * s);
-  ctx.fillStyle = frz ? '#559977' : '#5a7a32';
-  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.arc(i * 4 * s, (-36 + sb / s) * s, 3 * s, 0, Math.PI * 2); ctx.fill(); }
-  ctx.fillStyle = '#ffaa00'; _circ(ctx, -3 * s, (-29 + sb / s) * s, 2.5 * s); _circ(ctx, 3 * s, (-29 + sb / s) * s, 2.5 * s);
-  if (ef.burnTimer > 0 && ef.freezeTimer <= 0) { ctx.globalAlpha = 0.4 + 0.2 * Math.sin(Date.now() * 0.01); ctx.fillStyle = '#ff8800'; _ellipse(ctx, 0, -16 * s, 16 * s, 18 * s); ctx.globalAlpha = 1; }
-  _slowAura(ctx, ef.slowTimer);
-}
-
+// Small canvas helpers used by the boss artwork.
+function _fill(ctx,color){ctx.fillStyle=color;}
+function _circ(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function _ellipse(ctx,x,y,rx,ry,rot=0){ctx.beginPath();ctx.ellipse(x,y,rx,ry,rot,0,Math.PI*2);ctx.fill();}
 function _drawBoss(ctx, type, fr, ef, s) {
   if (type === 'dragon') _drawDragonBoss(ctx, fr, ef, s);
   if (type === 'lichking') _drawLichBoss(ctx, fr, ef, s);
@@ -393,28 +166,86 @@ function _drawDemonBoss(ctx, fr, ef, s) {
   if (ef.enraged) { ctx.globalAlpha = 0.4 + 0.3 * Math.sin(Date.now() * 0.015); ctx.fillStyle = '#ff4400'; _ellipse(ctx, 0, -20 * s, 18 * s, 25 * s); ctx.globalAlpha = 1; }
 }
 
-// HP bar
-function _drawHPBar(ctx, x, y, hp, maxHp, s, isBoss) {
-  const bw = isBoss ? 64 : Math.max(24, 28 * s), bh = isBoss ? 7 : 4, above = isBoss ? 72 : 28 * s;
-  const bx = x - bw / 2, by = y - above, pct = Math.max(0, hp / maxHp);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-  ctx.fillStyle = pct > 0.6 ? '#33ee55' : pct > 0.3 ? '#eeaa22' : '#ee3322';
-  ctx.fillRect(bx, by, bw * pct, bh);
-  if (isBoss) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh); }
-}
 
-// Projectile drawing
-function drawProjectile(ctx, proj) {
-  const def = TOWER_DEFS[proj.towerType];
-  if (!def) return;
-  ctx.save();
-  ctx.shadowBlur = 6; ctx.shadowColor = def.projectileColor; ctx.fillStyle = def.projectileColor;
-  _circ(ctx, proj.x, proj.y, def.projectileSize);
-  if (proj.towerType === 'cannon') { ctx.fillStyle = '#ffcc00'; _circ(ctx, proj.x - 1, proj.y - 1, 2); }
-  ctx.shadowBlur = 0; ctx.restore();
+function drawMonster(c,m) {
+  c.save();c.translate(m.x,m.y);
+  if(m.isBoss) {
+    _drawBoss(c,m.bossType,m.frame,{...m.effects,enraged:m.enraged},m.scale);
+  } else {
+    const s=m.scale,step=Math.sin(m.distTraveled*.16)*3,skin=m.type==='orc'?'#8f9970':m.type==='troll'?'#7f9161':'#9aa66e';
+    const frozen=m.effects.freezeTimer>0;
+    c.scale((m.facing||1)*s,s);
+    artOval(c,1,3,11,4,'#152b274f');
+    c.translate(0,-Math.abs(step)*.25);
+    artLine(c,[[-4,-2],[-5+step,6],[-2+step,7]],'#453f2d',3);
+    artLine(c,[[4,-2],[5-step,6],[8-step,7]],'#393c2e',3);
+    if(m.type==='darkelf') {
+      artPoly(c,[[-5,-22],[5,-22],[9,-2],[12,6],[0,3],[-10,6],[-7,-4]],frozen?'#709baf':'#675779','#293e3d');
+      artPoly(c,[[-5,-22],[-8,-11],[0,-8],[7,-13],[5,-23],[0,-29]],frozen?'#88b7c9':'#514a6a');
+      artPoly(c,[[-3,-20],[4,-20],[3,-14],[-2,-14]],'#c8b08c');
+      artLine(c,[[-1,-18],[2,-18]],'#f0d189',1.3);
+      artLine(c,[[0,-10],[1,2]],'#aa967c',1);
+      c.strokeStyle='#bba477';c.lineWidth=1.4;c.beginPath();c.arc(9,-9,10,-1.3,1.3);c.stroke();artLine(c,[[12,-18],[8,-8],[12,0]],'#d5c9a4',.6);
+    } else if(m.type==='troll') {
+      artOval(c,0,-13,11,13,frozen?'#83acb6':skin);
+      artOval(c,-8,-17,6,7,frozen?'#6094a5':'#698259');artOval(c,8,-18,6,8,frozen?'#659daa':'#829661');
+      artPoly(c,[[-8,-6],[7,-6],[6,4],[-7,2]],'#756447');artLine(c,[[-7,-5],[7,-4]],'#cab58b',2);
+      artOval(c,2,-27,8,8,frozen?'#9bc0c8':'#a0aa71');
+      artPoly(c,[[-4,-22],[-3,-28],[1,-22],[5,-22],[8,-29],[8,-20]],'#d3c79e');
+      artLine(c,[[-2,-28],[0,-28],[4,-28],[6,-28]],'#383c26',1.5);
+      for(let k=0;k<4;k++)artOval(c,-7+k*4,-32,3,3,'#647c58');
+      artLine(c,[[11,-13],[17,-3],[19,5]],'#806548',4);artPoly(c,[[15,-2],[20,-7],[25,4],[20,10]],'#715d41','#b09461');
+    } else {
+      const armored=m.type==='orc';
+      artPoly(c,[[-7,-18],[6,-18],[8,-2],[-7,-2]],frozen?'#689eb1':armored?'#768b88':'#87704a','#394d38');
+      if(armored) {
+        artPoly(c,[[-7,-19],[1,-21],[8,-17],[6,-8],[0,-5],[-6,-10]],'#aab2a0','#5e7672');
+        artOval(c,-9,-18,5,4,'#889a8c');artOval(c,8,-18,5,4,'#677e78');
+        artPoly(c,[[-12,-12],[-6,-10],[-7,0],[-12,3],[-16,-2],[-16,-11]],'#876e49','#c3b17c');
+        artLine(c,[[-12,-10],[-12,0]],'#d4bd7e',1.4);
+      } else {artLine(c,[[-5,-17],[5,-6]],'#baa273',2);c.fillStyle='#c0a477';c.fillRect(-6,-5,13,2);}
+      artOval(c,0,-25,6,7,frozen?'#9fc9d2':skin);
+      if(armored) {
+        artPoly(c,[[-7,-27],[-6,-32],[0,-35],[7,-30],[7,-26]],'#929f8b','#4c6560');
+        artPoly(c,[[-3,-21],[-4,-25],[0,-21],[3,-21],[5,-25],[5,-20]],'#e1d6ad');
+      } else {
+        artPoly(c,[[-4,-27],[-12,-29],[-7,-22]],frozen?'#8ebbc6':'#9aaa74');
+        artPoly(c,[[4,-27],[10,-30],[7,-23]],frozen?'#83abba':'#7e9667');
+        artPoly(c,[[-7,-29],[0,-35],[7,-30]],'#6a7444');
+      }
+      artLine(c,[[-3,-26],[-1,-26],[2,-26],[4,-26]],'#303d2b',1.4);
+      artLine(c,[[7,-15],[11,-9]],frozen?'#9ac2c7':skin,3);
+      if(armored){artLine(c,[[12,-17],[14,3]],'#806747',2);artPoly(c,[[11,-19],[20,-23],[22,-15],[13,-12]],'#aeb9a7','#5b7067');}
+      else{artPoly(c,[[10,-12],[13,-23],[15,-12],[12,-8]],'#b3bba1');artLine(c,[[10,-10],[15,-10]],'#b09962',2);}
+    }
+    if(m.hitTimer>0) {c.globalAlpha=m.hitTimer/300;artOval(c,0,-13,10,16,'#fff1c9');c.globalAlpha=1;}
+    if(frozen) {artPoly(c,[[-12,5],[-13,-11],[-7,-24],[7,-26],[13,-9],[10,5]],'#aee4ee22','#b5e2e677');}
+    if(m.effects.burnTimer>0){const time=G.visualTime;for(let k=0;k<3;k++){const yy=-4-((time/28+k*9)%23);artPoly(c,[[-7+k*6,yy],[-9+k*6,yy-6],[-6+k*6,yy-11],[-4+k*6,yy-3]],'#eda65b99');}}
+    if(m.effects.slowTimer>0){c.strokeStyle='#bc99df99';c.lineWidth=1;c.beginPath();c.ellipse(0,3,13,5,0,0,Math.PI*2);c.stroke();}
+  }
+  c.restore();
 }
-
-// Particle drawing
-function drawParticle(ctx, p) {
-  ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color; _circ(ctx, p.x, p.y, p.r); ctx.globalAlpha = 1;
+function _drawHPBar(c,x,y,hp,maxHp,s,isBoss) {
+  if(!isBoss&&hp>=maxHp)return;
+  const w=isBoss?80:24*s,h=isBoss?5:3,above=isBoss?70*s:38*s;
+  c.fillStyle='#11291ecc';c.fillRect(x-w/2-1,y-above-1,w+2,h+2);
+  c.fillStyle=hp/maxHp>.35?'#b5c58c':'#e89c70';c.fillRect(x-w/2,y-above,w*Math.max(0,hp/maxHp),h);
 }
+function drawProjectile(c,p) {
+  const def=TOWER_DEFS[p.towerType];if(!def)return;
+  const target=G.monsters.find(m=>m.id===p.targetId),a=target?Math.atan2(target.y-p.y,target.x-p.x):0;
+  c.save();c.translate(p.x,p.y-9);c.rotate(a);
+  if(p.towerType==='archer') {
+    artLine(c,[[-11,0],[3,0]],'#c6b58c',1.3);artPoly(c,[[3,-2],[8,0],[3,2]],'#e7ddbd');artLine(c,[[-9,-3],[-6,0],[-9,3]],'#e8d8ae',1);
+  } else if(p.towerType==='cannon') {
+    artOval(c,0,0,4.5,4.5,'#34423d');artOval(c,-1,-2,2,1.5,'#93a397');
+  } else if(p.towerType==='ice') {
+    artPoly(c,[[-8,-2],[1,-3],[8,0],[1,3],[-8,2]],'#c4e2dc');artLine(c,[[-16,0],[-8,0]],'#adddd277',2);
+  } else {
+    const color=p.towerType==='dragon'?'#eea763':'#c6aaee';
+    const g=c.createRadialGradient(0,0,0,0,0,11);g.addColorStop(0,color);g.addColorStop(.3,color+'bb');g.addColorStop(1,color+'00');artOval(c,0,0,11,11,g);
+    artPoly(c,[[-19,-2],[-5,-4],[2,0],[-5,4],[-14,2]],color+'66');
+  }
+  c.restore();
+}
+function drawParticle(c,p) {c.save();c.globalAlpha=Math.max(0,p.alpha);artOval(c,p.x,p.y,p.r,p.r*.7,p.color);c.restore();}

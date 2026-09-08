@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const source = ['levels.js', 'entities.js', 'renderer.js', 'ui.js', 'game.js']
+const source = ['levels.js', 'entities.js', 'renderer.js', 'audio.js', 'ui.js', 'controls.js', 'game.js']
   .map(file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')).join('\n');
 
 function game(width = 1280, height = 746) {
@@ -18,14 +18,15 @@ function game(width = 1280, height = 746) {
     performance: { now: () => 0 },
     requestAnimationFrame() {},
     setTimeout() {},
+    clearTimeout() {},
     localStorage: { getItem() { return null; }, setItem() {} },
   });
   const run = code => vm.runInContext(code, context);
   run(source);
   run(`
-    updateHUD = hideOverlay = showVictory = showGameOver = showLevelComplete = showBossBanner = renderFrame = function() {};
+    updateHUD = hideOverlay = showVictory = showGameOver = showLevelComplete = showBossBanner = renderFrame = notifyPlayer = function() {};
     canvas = { width: ${width}, height: ${height}, style: {}, getBoundingClientRect() { return {left: 0, top: 0, width: this.width, height: this.height}; } };
-    updateOffsets();
+    viewWidth = ${width}; viewHeight = ${height}; updateOffsets();
     startLevel(0);
   `);
   return { run, elements };
@@ -70,7 +71,7 @@ test('resizing preserves enemy positions and routes aligned with the map', () =>
   const { run } = game();
   run(`spawnMonster('goblin'); updateMonsters(1000);`);
   const before = plain(run(`({x: G.monsters[0].x, y: G.monsters[0].y, route: G.screenWPs, destination: gridCenter(...LEVELS[0].waypoints[1])})`));
-  run('window.innerWidth = 390; window.innerHeight = 770; resizeCanvas();');
+  run('window.innerWidth = 390; window.innerHeight = 770; canvas.width = 390; canvas.height = 600; resizeCanvas();');
   const after = plain(run(`({x: G.monsters[0].x, y: G.monsters[0].y, route: G.screenWPs, destination: gridCenter(...LEVELS[0].waypoints[1])})`));
   assert.deepEqual(after, before);
   assert.deepEqual(after.route[1], after.destination);
