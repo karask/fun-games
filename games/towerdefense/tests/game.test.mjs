@@ -8,6 +8,7 @@ const source = ['levels.js', 'entities.js', 'renderer.js', 'audio.js', 'ui.js', 
 
 function game(width = 1280, height = 746) {
   const elements = new Map();
+  const storage = new Map();
   const context = vm.createContext({
     console,
     window: { innerWidth: width, innerHeight: height + 170, addEventListener() {} },
@@ -19,7 +20,7 @@ function game(width = 1280, height = 746) {
     requestAnimationFrame() {},
     setTimeout() {},
     clearTimeout() {},
-    localStorage: { getItem() { return null; }, setItem() {} },
+    localStorage: { getItem(key) { return storage.get(key) ?? null; }, setItem(key, value) { storage.set(key, String(value)); } },
   });
   const run = code => vm.runInContext(code, context);
   run(source);
@@ -29,7 +30,7 @@ function game(width = 1280, height = 746) {
     viewWidth = ${width}; viewHeight = ${height}; updateOffsets();
     startLevel(0);
   `);
-  return { run, elements };
+  return { run, elements, storage };
 }
 
 function plain(value) { return JSON.parse(JSON.stringify(value)); }
@@ -136,4 +137,107 @@ test('pausing a wave freezes simulation and resuming advances it', () => {
   assert.deepEqual(plain(run('({monster: G.monsters[0], groups: G.spawnGroups, gold: G.gold})')), before);
   run('G.paused = false; gameLoop(200);');
   assert.ok(run('G.monsters[0].distTraveled') > before.monster.distTraveled);
+});
+
+test('repeated ice hits cannot extend a freeze already in progress', () => {
+  const { run } = game();
+  run(`spawnMonster('goblin'); const frozen = G.monsters[0];
+    const iceHit = {damage: 1, towerType: 'ice', effect: {freeze: 800}};
+    applyDamage(frozen, iceHit); updateMonsters(300);`);
+  const remaining = run('frozen.effects.freezeTimer');
+  assert.equal(remaining, 500);
+  run('applyDamage(frozen, iceHit); applyDamage(frozen, iceHit);');
+  assert.equal(run('frozen.effects.freezeTimer'), remaining);
+  run('updateMonsters(500);');
+  assert.equal(run('frozen.effects.freezeTimer'), 0);
+});
+
+test('enemies can move during the 1200ms freeze recovery before freezing again', () => {
+  const { run } = game();
+  run(`spawnMonster('goblin'); const frozen = G.monsters[0];
+    const iceHit = {damage: 1, towerType: 'ice', effect: {freeze: 800}};
+    applyDamage(frozen, iceHit); updateMonsters(800);
+    applyDamage(frozen, iceHit);`);
+  assert.equal(run('frozen.effects.freezeTimer'), 0);
+  run('updateMonsters(1199); applyDamage(frozen, iceHit);');
+  assert.equal(run('frozen.effects.freezeTimer'), 0);
+  assert.ok(run('frozen.distTraveled') > 0);
+  run('updateMonsters(1); applyDamage(frozen, iceHit);');
+  assert.equal(run('frozen.effects.freezeTimer'), 800);
+});
+
+test('magic bypasses enemy armor while physical shots respect it', () => {
+  const { run } = game();
+  const damage = plain(run(`spawnMonster('orc'); const armored = G.monsters[0]; armored.dodge = 0;
+    const before = armored.hp; applyDamage(armored, {damage: 20, towerType: 'archer'});
+    const physical = before - armored.hp;
+    const afterPhysical = armored.hp; applyDamage(armored, {damage: 20, towerType: 'magic'});
+    ({physical, magic: afterPhysical - armored.hp, armor: armored.armor});`));
+  assert.ok(damage.armor > 0);
+  assert.equal(damage.physical, 20 - damage.armor);
+  assert.equal(damage.magic, 20);
+});
+
+for (const [priority, expectedIndex] of [['first', 0], ['strongest', 1], ['fastest', 2]]) {
+  test(`${priority} target priority chooses the appropriate living enemy in range`, () => {
+    const { run } = game();
+    const result = plain(run(`G.selectedTowerType = 'archer'; placeTower(2, 3);
+      G.inspectedTower = G.towers[0]; setTargetPriority('${priority}');
+      for(let i = 0; i < 5; i++) spawnMonster('goblin');
+      const position = gridCenter(2, 3);
+      G.monsters.forEach(m => { m.x = position.x; m.y = position.y; m.distTraveled = 1; m.hp = 10; m.speed = 10; });
+      G.monsters[0].distTraveled = 100; G.monsters[1].hp = 100; G.monsters[2].speed = 100;
+      Object.assign(G.monsters[3], {hp: 9999, speed: 9999, distTraveled: 9999, x: position.x + 9999});
+      Object.assign(G.monsters[4], {hp: 9999, speed: 9999, distTraveled: 9999, reachedEnd: true});
+      updateTowers(16);
+      ({target: G.projectiles[0]?.targetId, expected: G.monsters[${expectedIndex}].id});`));
+    assert.equal(result.target, result.expected);
+  });
+}
+
+test('pausing blocks tower purchases, upgrades, sales, and starting a wave', () => {
+  const { run } = game();
+  run(`G.gold = 1000; G.selectedTowerType = 'archer'; placeTower(2, 3);
+    G.inspectedTower = G.towers[0]; showPause = function() {}; setPaused(true);`);
+  const before = plain(run('({gold: G.gold, towers: G.towers, phase: G.phase, groups: G.spawnGroups})'));
+  run('placeTower(9, 6); upgradeTower(); sellTower(); onStartWave();');
+  assert.deepEqual(plain(run('({gold: G.gold, towers: G.towers, phase: G.phase, groups: G.spawnGroups})')), before);
+});
+
+test('malformed saved medals are safe to render in realm selection', () => {
+  const { run, storage } = game();
+  const key = run('PROGRESS_KEY');
+  run('presentOverlay = function(html) { globalThis.menuHTML = html; };');
+  for (const saved of ['broken json', 'null', '7', JSON.stringify({0: {stars: 9, lives: 20}}),
+    JSON.stringify({0: {stars: -1, lives: 20}}), JSON.stringify({0: {stars: 1.5, lives: 20}}),
+    JSON.stringify({0: {stars: 3, lives: '<script>'}}), JSON.stringify({0: {stars: 3, lives: 999}})]) {
+    storage.set(key, saved);
+    assert.deepEqual(plain(run('progressFor(0)')), {stars: 0, lives: 0});
+    assert.doesNotThrow(() => run('showMenu();'));
+    assert.match(run('menuHTML'), /Uncharted/);
+  }
+});
+
+test('saved medals retain the best stars and lives across stronger and weaker clears', () => {
+  const { run } = game();
+  run('G.lives = 15; bankMedal();');
+  assert.deepEqual(plain(run('progressFor(0)')), {stars: 2, lives: 15});
+  run('G.lives = LEVELS[0].lives; bankMedal();');
+  const best = plain(run('progressFor(0)'));
+  assert.equal(best.stars, 3);
+  run('G.lives = 1; bankMedal();');
+  assert.deepEqual(plain(run('progressFor(0)')), best);
+  assert.equal(run('G.recordSaved'), true);
+});
+
+test('tile hit testing remains accurate after camera zoom and pan', () => {
+  for (const width of [1280, 390]) {
+    const { run } = game(width);
+    const hits = plain(run(`zoomCamera(0.8, {x: 150, y: 200}); cameraPanX += 85; cameraPanY -= 47; updateOffsets();
+      [[0,0], [2,3], [9,6], [COLS-1,ROWS-1]].map(([col,row]) => {
+        const world = gridCenter(col,row), screen = worldToScreen(world.x,world.y);
+        return {expected: {col,row}, actual: screenToGrid(screen.x,screen.y)};
+      });`));
+    for (const hit of hits) assert.deepEqual(hit.actual, hit.expected);
+  }
 });

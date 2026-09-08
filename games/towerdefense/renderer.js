@@ -160,7 +160,7 @@ function renderFrame() {
   ctx.setTransform(pixelRatio,0,0,pixelRatio,0,0);
   drawBackground(ctx);
   if(!G)return;
-  const lvl=LEVELS[G.levelIdx],time=G.visualTime||0;
+  const lvl=LEVELS[G.levelIdx],time=G.reducedMotion?0:(G.visualTime||0);
   if(terrainLevel!==G.levelIdx||!terrainLayer)cacheTerrain();
   ctx.save();ctx.translate(VIEW_X,VIEW_Y);ctx.scale(VIEW_SCALE,VIEW_SCALE);
   ctx.drawImage(terrainLayer,0,0,1096,668);
@@ -187,12 +187,12 @@ function renderFrame() {
     const p=gridCenter(t.col,t.row);
     objects.push({y:p.y,draw:()=>{ctx.save();ctx.translate(p.x,p.y);drawTowerArt(ctx,t,time);ctx.restore();}});
   }
-  if(preview&&!placementError(preview.col,preview.row)) {
+  if(preview&&lvl.map[preview.row]?.[preview.col]===T_GRASS&&!G.towers.some(t=>t.col===preview.col&&t.row===preview.row)) {
     const p=gridCenter(preview.col,preview.row);
     objects.push({y:p.y,draw:()=>{ctx.save();ctx.globalAlpha=.55;ctx.translate(p.x,p.y);drawTowerArt(ctx,{type:G.selectedTowerType,level:0,aim:-.5},time);ctx.restore();}});
   }
   const exit=lvl.waypoints[lvl.waypoints.length-1],base=gridCenter(COLS-1,exit[1]),entry=gridCenter(0,lvl.waypoints[0][1]);
-  objects.push({y:base.y,draw:()=>drawStronghold(ctx,base.x,base.y,time,G.crystalFlash!==undefined&&time-G.crystalFlash<450)});
+  objects.push({y:base.y,draw:()=>drawStronghold(ctx,base.x,base.y,time,!G.reducedMotion&&G.crystalFlash!==undefined&&G.visualTime-G.crystalFlash<450)});
   objects.push({y:entry.y,draw:()=>drawEntryArt(ctx,entry.x,entry.y,time)});
   for(const m of G.remnants)objects.push({y:m.y,draw:()=>{ctx.save();ctx.globalAlpha=m.fade/350;ctx.translate(m.x,m.y);ctx.scale(1,m.fade/350);ctx.translate(-m.x,-m.y);drawMonster(ctx,m);ctx.restore();}});
   for(const m of G.monsters)objects.push({y:m.y,draw:()=>drawMonster(ctx,m)});

@@ -10,7 +10,7 @@ window.addEventListener('DOMContentLoaded', () => {
   canvas.addEventListener('click',       onCanvasClick);
   canvas.addEventListener('contextmenu', e => { e.preventDefault(); onRightClick(e); });
   canvas.addEventListener('mousemove',   onMouseMove);
-  canvas.addEventListener('mouseleave',  () => { if(G) G.hoverCell=null; });
+  canvas.addEventListener('mouseleave',  () => { if(G && !G.touchMode) G.hoverCell=null; });
 
   initUI();
   resizeCanvas();
@@ -63,6 +63,7 @@ function startLevel(idx) {
     remnants:          [],
     effects:           [],
     touchMode:         Boolean(window.matchMedia?.('(pointer: coarse)').matches),
+    reducedMotion:     Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),
     levelIdx:          idx,
     waveIdx:           0,
     lives:             lvl.lives,

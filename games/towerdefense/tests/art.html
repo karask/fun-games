@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="../favicon.svg">
+<title>Kingdom Defense · art regression scene</title>
+<style>body{margin:0;background:#14251d;color:#e4dcc3;font:14px system-ui}h1{font-size:18px;margin:20px}p{margin:0 20px 16px;color:#a4b39a}canvas{display:block;width:min(1100px,100%);height:auto;margin:auto}</style>
+<h1>Kingdom Defense · art regression scene</h1>
+<p>All tower tiers, enemy families, and bosses. This fixture is for visual verification, not gameplay.</p>
+<canvas id="art" width="2200" height="1800" aria-label="Tower tiers and enemy artwork"></canvas>
+<script src="../levels.js"></script><script src="../entities.js"></script><script src="../art.js"></script>
+<script>
+const G={visualTime:0,reducedMotion:false};
+const canvas=document.getElementById('art'),ctx=canvas.getContext('2d');
+function frame(time){
+ G.visualTime=time;ctx.setTransform(2,0,0,2,0,0);ctx.fillStyle='#263d30';ctx.fillRect(0,0,1100,900);
+ for(let level=0;level<3;level++)TOWER_ORDER.forEach((type,i)=>{
+  const x=110+i*220,y=140+level*200;
+  ctx.save();ctx.translate(x,y);ctx.scale(1.5,1.5);drawTowerArt(ctx,{type,level,aim:Math.sin(time/1800),shot:(time%1800)<180?180-time%1800:0},time);ctx.restore();
+  ctx.fillStyle='#d5ccae';ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText(`${TOWER_DEFS[type].name} · ${level+1}`,x,y+35);
+ });
+ const defs=[...Object.entries(MONSTER_DEFS),...Object.entries(BOSS_DEFS)];
+ defs.forEach(([type,def],i)=>{
+  const x=75+i*155,y=810,isBoss=i>3;
+  drawMonster(ctx,{...def,type,bossType:isBoss?type:null,isBoss,x,y,hp:def.hp,maxHp:def.hp,frame:Math.floor(time/130)%3,distTraveled:time/60,facing:1,effects:{freezeTimer:0,burnTimer:0,slowTimer:0},hitTimer:0});
+  ctx.fillStyle='#d5ccae';ctx.fillText(def.name,x,y+50);
+ });
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</html>
