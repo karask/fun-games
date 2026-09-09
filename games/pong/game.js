@@ -1,304 +1,252 @@
-import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
+import { getHighScores, saveHighScore } from '../../assets/highscore.js';
+import { PongMatch, FrameClock, COURT } from './engine.mjs?v=court-2';
+import { CourtRenderer } from './renderer.mjs?v=court-2';
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreP1Element = document.getElementById('score-p1');
-const scoreP2Element = document.getElementById('score-p2');
+const $ = id => document.getElementById(id);
+const canvas = $('gameCanvas');
+const match = new PongMatch();
+const clock = new FrameClock();
+const renderer = new CourtRenderer(canvas);
+const keys = new Set(), pointers = new Map();
+const targets = [null, null];
+let shownPhase = null, audio = null, sound = false;
+try { sound = localStorage.getItem('fun_games_pong_sound') === 'on'; } catch { /* Audio remains optional. */ }
 
-const startScreenElement = document.getElementById('start-screen');
-const gameOverElement = document.getElementById('game-over');
-const winnerTextElement = document.getElementById('winner-text');
-const rallyTextElement = document.getElementById('rally-text');
-const startLeaderboardElement = document.getElementById('start-leaderboard');
-const gameOverLeaderboardElement = document.getElementById('game-over-leaderboard');
-const hsInputSection = document.getElementById('hs-input-section');
-const hsInitials = document.getElementById('hs-initials');
-const hsSubmitBtn = document.getElementById('hs-submit-btn');
-const mainMenuBtn = document.getElementById('main-menu-btn');
-
-// Paddle constants
-const PADDLE_WIDTH = 10;
-const PADDLE_HEIGHT = 80;
-const PADDLE_SPEED = 6;
-const BALL_SIZE = 10;
-
-// Game state
-let score1 = 0;
-let score2 = 0;
-let rallyCount = 0;
-let maxRally = 0;
-let gameStarted = false;
-let gameOver = false;
-let lastTime = 0;
-let animFrame;
-
-
-let p1 = { x: 20, y: canvas.height/2 - PADDLE_HEIGHT/2, dy: 0 };
-let p2 = { x: canvas.width - 30, y: canvas.height/2 - PADDLE_HEIGHT/2, dy: 0 };
-
-let ball = {
-    x: canvas.width/2,
-    y: canvas.height/2,
-    dx: 5,
-    dy: 3,
-    speed: 6
-};
-
-// Input state
-const keys = { w: false, s: false, ArrowUp: false, ArrowDown: false };
-
-function resetBall() {
-    ball.x = canvas.width / 2;
-    ball.y = canvas.height / 2;
-    // Reverse direction and randomize angle slightly
-    ball.dx = -ball.dx;
-    ball.dy = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 2 + 2);
-    ball.speed = 6;
-    
-    normalizeBallVelocity();
+function write(id, value) {
+    const element = $(id), text = String(value);
+    if (element.textContent !== text) element.textContent = text;
 }
-
-function normalizeBallVelocity() {
-    const magnitude = Math.sqrt(ball.dx*ball.dx + ball.dy*ball.dy);
-    ball.dx = (ball.dx / magnitude) * ball.speed;
-    ball.dy = (ball.dy / magnitude) * ball.speed;
+function options() {
+    return { mode: document.querySelector('input[name="mode"]:checked').value,
+        difficulty: document.querySelector('input[name="difficulty"]:checked').value };
 }
-
-function update(dt) {
-    // Move paddles
-    if (keys.w && p1.y > 0) p1.y -= PADDLE_SPEED * dt;
-    if (keys.s && p1.y < canvas.height - PADDLE_HEIGHT) p1.y += PADDLE_SPEED * dt;
-    
-    if (keys.ArrowUp && p2.y > 0) p2.y -= PADDLE_SPEED * dt;
-    if (keys.ArrowDown && p2.y < canvas.height - PADDLE_HEIGHT) p2.y += PADDLE_SPEED * dt;
-
-    // Move ball
-    ball.x += ball.dx * dt;
-    ball.y += ball.dy * dt;
-
-    // Wall collision (top/bottom)
-    if (ball.y < 0 || ball.y + BALL_SIZE > canvas.height) {
-        ball.dy = -ball.dy;
-        // Keep in bounds to prevent getting stuck
-        if (ball.y < 0) ball.y = 0;
-        if (ball.y + BALL_SIZE > canvas.height) ball.y = canvas.height - BALL_SIZE;
+function playerName(side) { return match.mode === 'solo' ? (side === 0 ? 'You' : 'CPU') : `Player ${side + 1}`; }
+function records() {
+    try {
+        return getHighScores('pong').filter(entry => entry && typeof entry.name === 'string' &&
+            Number.isFinite(entry.score) && entry.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+    } catch { return []; }
+}
+function renderRecords() {
+    const list = $('start-leaderboard');
+    list.replaceChildren();
+    const scores = records();
+    if (!scores.length) {
+        const empty = document.createElement('li');
+        empty.className = 'empty'; empty.textContent = 'A clean slate. How long can you keep it alive?';
+        list.append(empty);
     }
+    scores.forEach((entry, index) => {
+        const row = document.createElement('li'), rank = document.createElement('span');
+        const name = document.createElement('strong'), score = document.createElement('b');
+        rank.textContent = String(index + 1).padStart(2, '0');
+        name.textContent = entry.name.slice(0, 3); score.textContent = entry.score;
+        row.append(rank, name, score); list.append(row);
+    });
+}
 
-    // Paddle collision
-    // P1 Hit
-    if (ball.dx < 0 && 
-        ball.x < p1.x + PADDLE_WIDTH && 
-        ball.x + BALL_SIZE > p1.x && 
-        ball.y + BALL_SIZE > p1.y && 
-        ball.y < p1.y + PADDLE_HEIGHT) {
-            
-        ball.dx = -ball.dx;
-        // Adjust angle based on where it hit the paddle
-        let hitPoint = (ball.y + BALL_SIZE/2) - (p1.y + PADDLE_HEIGHT/2);
-        ball.dy = hitPoint * 0.15;
-        
-        rallyCount++;
-        maxRally = Math.max(maxRally, rallyCount);
-        
-        // Increase speed slightly
-        ball.speed = Math.min(ball.speed + 0.5, 12);
-        normalizeBallVelocity();
-        ball.x = p1.x + PADDLE_WIDTH; // Prevent sticking
+function clearInput() {
+    keys.clear(); targets.fill(null);
+    for (const pointer of pointers.keys()) if (canvas.hasPointerCapture(pointer)) canvas.releasePointerCapture(pointer);
+    pointers.clear();
+    clock.reset();
+}
+function prepareAudio() {
+    if (!sound) return;
+    try {
+        if (!audio) audio = new AudioContext();
+        if (audio.state === 'suspended') audio.resume().catch(() => {});
+    } catch { /* The game also works without an audio device. */ }
+}
+function tone(type) {
+    if (!sound || !audio || audio.state !== 'running') return;
+    const frequency = { hit: 520 + match.rally * 15, wall: 240, point: 140, serve: 720 }[type];
+    if (!frequency) return;
+    const oscillator = audio.createOscillator(), gain = audio.createGain();
+    const now = audio.currentTime, duration = type === 'point' ? .22 : .06;
+    oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(frequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(frequency * .7, now + duration);
+    gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(.07, now + .005);
+    gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+    oscillator.connect(gain); gain.connect(audio.destination);
+    oscillator.start(now); oscillator.stop(now + duration);
+    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+}
+function updateSoundButton() {
+    write('sound-btn', sound ? 'Sound on' : 'Sound off');
+    $('sound-btn').setAttribute('aria-pressed', String(sound));
+}
+$('sound-btn').addEventListener('click', () => {
+    sound = !sound; prepareAudio(); updateSoundButton();
+    try { localStorage.setItem('fun_games_pong_sound', sound ? 'on' : 'off'); } catch { /* Session setting still works. */ }
+    if (sound) tone('serve');
+    if (['playing', 'serving'].includes(match.phase)) canvas.focus({ preventScroll: true });
+});
+
+function startMatch() {
+    clearInput(); prepareAudio(); renderer.reset();
+    match.start(options());
+    syncUI(); canvas.focus({ preventScroll: true });
+    write('announcer', `Match started. ${match.mode === 'solo' ? 'You versus CPU' : 'Two players'}. First to five.`);
+}
+function showMenu() {
+    clearInput(); renderer.reset(); match.start(options()); match.phase = 'menu';
+    renderRecords(); syncUI(); $('start-btn').focus({ preventScroll: true });
+}
+function pause(reason = 'Your rally will be right here.') {
+    if (!['playing', 'serving'].includes(match.phase)) return;
+    match.pause(); clearInput(); write('pause-reason', reason); syncUI();
+    $('resume-btn').focus({ preventScroll: true });
+    write('announcer', 'Match paused.');
+}
+function resume() {
+    if (match.phase !== 'paused') return;
+    clearInput(); prepareAudio(); match.resume(); syncUI(); canvas.focus({ preventScroll: true });
+    write('announcer', 'Match resumed.');
+}
+function finishMatch() {
+    clearInput();
+    const title = match.mode === 'solo' ? (match.winner === 0 ? 'YOU WIN.' : 'CPU WINS.') : `PLAYER ${match.winner + 1} WINS.`;
+    write('winner-text', title);
+    $('winner-text').className = match.winner === 0 ? 'pink' : 'cyan';
+    write('final-score', `${match.scores[0]} — ${match.scores[1]}`);
+    write('rally-text', match.bestRally);
+    const scores = records();
+    $('record-form').hidden = !(match.bestRally > 0 && (scores.length < 5 || match.bestRally > scores.at(-1).score));
+    $('record-form').reset(); write('record-status', '');
+    $('rematch-btn').focus({ preventScroll: true });
+    write('announcer', `${title} ${match.scores[0]} to ${match.scores[1]}. Longest rally: ${match.bestRally}.`);
+}
+$('record-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const initials = $('hs-initials').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{1,3}$/.test(initials)) return;
+    try {
+        saveHighScore('pong', initials, match.bestRally);
+        $('record-form').hidden = true; write('record-status', 'Record saved. Your next rally is waiting.');
+        $('rematch-btn').focus({ preventScroll: true });
+    } catch { write('record-status', 'Could not save on this device. You can still play again.'); }
+});
+$('start-btn').addEventListener('click', startMatch);
+$('rematch-btn').addEventListener('click', startMatch);
+$('main-menu-btn').addEventListener('click', showMenu);
+$('pause-menu-btn').addEventListener('click', showMenu);
+$('pause-btn').addEventListener('click', () => pause());
+$('resume-btn').addEventListener('click', resume);
+for (const radio of document.querySelectorAll('input[type="radio"]')) radio.addEventListener('change', () => {
+    const choice = options();
+    $('difficulty-field').disabled = choice.mode === 'versus';
+    $('setup-hint').innerHTML = choice.mode === 'solo' ? 'W / S or ↑ / ↓ to move.<br>Mouse and touch work too.' : 'P1: W / S · P2: ↑ / ↓<br>Touch: drag on your half of the court.';
+    match.mode = choice.mode; match.difficulty = choice.difficulty; syncUI();
+});
+
+for (const id of ['pips-p1', 'pips-p2']) {
+    for (let i = 0; i < 5; i++) $(id).append(document.createElement('i'));
+}
+function syncUI() {
+    const phase = match.phase;
+    if (shownPhase !== phase) {
+        $('game-container').dataset.phase = phase;
+        $('start-screen').hidden = phase !== 'menu';
+        $('pause-screen').hidden = phase !== 'paused';
+        $('game-over').hidden = phase !== 'over';
+        $('serve-notice').hidden = phase !== 'serving';
+        $('pause-btn').disabled = !['playing', 'serving'].includes(phase);
+        canvas.tabIndex = ['playing', 'serving'].includes(phase) ? 0 : -1;
+        shownPhase = phase;
+        if (phase === 'over') finishMatch();
     }
-
-    // P2 Hit
-    if (ball.dx > 0 && 
-        ball.x + BALL_SIZE > p2.x && 
-        ball.x < p2.x + PADDLE_WIDTH && 
-        ball.y + BALL_SIZE > p2.y && 
-        ball.y < p2.y + PADDLE_HEIGHT) {
-            
-        ball.dx = -ball.dx;
-        let hitPoint = (ball.y + BALL_SIZE/2) - (p2.y + PADDLE_HEIGHT/2);
-        ball.dy = hitPoint * 0.15;
-        
-        rallyCount++;
-        maxRally = Math.max(maxRally, rallyCount);
-        
-        ball.speed = Math.min(ball.speed + 0.5, 12);
-        normalizeBallVelocity();
-        ball.x = p2.x - BALL_SIZE; // Prevent sticking
+    for (let side = 0; side < 2; side++) {
+        write(`score-p${side + 1}`, match.scores[side]);
+        write(`label-p${side + 1}`, playerName(side).toUpperCase());
+        Array.from($(`pips-p${side + 1}`).children).forEach((pip, i) => pip.classList.toggle('on', i < match.scores[side]));
     }
-
-    // Scoring
-    if (ball.x < 0) {
-        score2++;
-        scoreP2Element.textContent = score2;
-        rallyCount = 0;
-        checkWin();
-        if (!gameOver) resetBall();
-    } else if (ball.x > canvas.width) {
-        score1++;
-        scoreP1Element.textContent = score1;
-        rallyCount = 0;
-        checkWin();
-        if (!gameOver) resetBall();
+    write('match-mode', match.mode === 'solo' ? `SOLO / ${match.difficulty.toUpperCase()}` : 'LOCAL VERSUS');
+    write('rally-count', String(match.rally).padStart(2, '0'));
+    write('best-rally', String(match.bestRally).padStart(2, '0'));
+    write('speed-label', (match.ball.speed / COURT.ballSpeed).toFixed(1) + '×');
+    $('speed-fill').style.width = `${(match.ball.speed - COURT.ballSpeed) / (COURT.maxBallSpeed - COURT.ballSpeed) * 100}%`;
+    write('controls-hint', match.mode === 'solo' ? 'W / S or ↑ / ↓ · Mouse / touch · P to pause' : 'P1: W / S · P2: ↑ / ↓ · Touch: drag your half · P to pause');
+    if (phase === 'serving') {
+        write('serve-label', match.lastScorer === null ? 'GET READY' : `${playerName(match.lastScorer).toUpperCase()} ${match.mode === 'solo' && match.lastScorer === 0 ? 'SCORE' : 'SCORES'}`);
+        write('serve-count', Math.ceil(match.serveTime));
+        write('serve-direction', match.ball.vx > 0 ? 'SERVING RIGHT →' : '← SERVING LEFT');
     }
 }
 
-function checkWin() {
-    if (score1 >= 5 || score2 >= 5) {
-        gameOver = true;
-        gameStarted = false;
-        showGameOver();
+function input() {
+    const axis = (up, down) => Number(keys.has(down)) - Number(keys.has(up));
+    const left = axis('KeyW', 'KeyS') + (match.mode === 'solo' ? axis('ArrowUp', 'ArrowDown') : 0);
+    return [{ axis: left, target: targets[0] }, { axis: axis('ArrowUp', 'ArrowDown'), target: targets[1] }];
+}
+const movementKeys = ['KeyW', 'KeyS', 'ArrowUp', 'ArrowDown'];
+document.addEventListener('keydown', event => {
+    const modal = match.phase === 'paused' ? $('pause-screen') : match.phase === 'over' ? $('game-over') : null;
+    if (event.code === 'Tab' && modal) {
+        const focusable = [...modal.querySelectorAll('button, input')].filter(element => element.getClientRects().length);
+        const first = focusable[0], last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        return;
     }
-}
-
-function showGameOver() {
-    winnerTextElement.textContent = score1 >= 5 ? 'PLAYER 1 WINS' : 'PLAYER 2 WINS';
-    winnerTextElement.style.color = score1 >= 5 ? '#ff9ff3' : '#48dbfb';
-    rallyTextElement.textContent = `Longest Rally: ${maxRally}`;
-    
-    if (isHighScore('pong', maxRally)) {
-        mainMenuBtn.style.display = 'none';
-        gameOverLeaderboardElement.style.display = 'none';
-        hsInputSection.style.display = 'flex';
-        hsInitials.value = '';
-        
-        hsSubmitBtn.onclick = () => {
-            const initials = hsInitials.value.trim().toUpperCase().substring(0, 3);
-            if (initials.length > 0) {
-                saveHighScore('pong', initials, maxRally);
-                showPostGameLeaderboard();
-            }
-        };
-    } else {
-        showPostGameLeaderboard();
+    if (event.target.matches('input:not([type="radio"]), textarea')) return;
+    if (event.code === 'KeyP' || event.code === 'Escape') {
+        if (!event.repeat) { event.preventDefault(); match.phase === 'paused' ? resume() : pause(); }
+        return;
     }
-    
-    gameOverElement.style.display = 'flex';
+    if (event.target.closest('button, input, select')) return;
+    if (event.code === 'Space') {
+        event.preventDefault();
+        if (!event.repeat) {
+            if (match.phase === 'menu' || match.phase === 'over') startMatch();
+            else if (match.phase === 'paused') resume(); else pause();
+        }
+        return;
+    }
+    if (movementKeys.includes(event.code) && ['playing', 'serving'].includes(match.phase)) {
+        event.preventDefault(); keys.add(event.code);
+        targets[event.code.startsWith('Key') || match.mode === 'solo' ? 0 : 1] = null;
+    }
+});
+document.addEventListener('keyup', event => keys.delete(event.code));
+window.addEventListener('blur', () => { pause('Focus left the court. Resume when you’re ready.'); clearInput(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pause('The match paused while you were away.'); clearInput(); } });
+
+function pointerTarget(event, side) {
+    const rect = canvas.getBoundingClientRect();
+    targets[side] = (event.clientY - rect.top) / rect.height * COURT.height;
 }
-
-function showPostGameLeaderboard() {
-    hsInputSection.style.display = 'none';
-    mainMenuBtn.style.display = 'block';
-    gameOverLeaderboardElement.style.display = 'block';
-    gameOverLeaderboardElement.innerHTML = generateLeaderboardHTML('pong');
+canvas.addEventListener('pointerdown', event => {
+    if (!['playing', 'serving'].includes(match.phase)) return;
+    event.preventDefault(); canvas.focus({ preventScroll: true }); prepareAudio();
+    const rect = canvas.getBoundingClientRect();
+    const side = match.mode === 'solo' || event.clientX < rect.left + rect.width / 2 ? 0 : 1;
+    if ([...pointers.values()].includes(side)) return;
+    pointers.set(event.pointerId, side); canvas.setPointerCapture(event.pointerId); pointerTarget(event, side);
+});
+canvas.addEventListener('pointermove', event => {
+    if (!['playing', 'serving'].includes(match.phase)) return;
+    if (pointers.has(event.pointerId)) pointerTarget(event, pointers.get(event.pointerId));
+    else if (event.pointerType === 'mouse' && match.mode === 'solo') pointerTarget(event, 0);
+});
+function releasePointer(event) {
+    const side = pointers.get(event.pointerId);
+    if (side !== undefined) { targets[side] = null; pointers.delete(event.pointerId); }
 }
-
-window.startGame = function() {
-    score1 = 0;
-    score2 = 0;
-    maxRally = 0;
-    rallyCount = 0;
-    scoreP1Element.textContent = 0;
-    scoreP2Element.textContent = 0;
-    gameOver = false;
-    gameStarted = true;
-    startScreenElement.style.display = 'none';
-    gameOverElement.style.display = 'none';
-    resetBall();
-};
-
-window.showMenu = function() {
-    startScreenElement.style.display = 'flex';
-    gameOverElement.style.display = 'none';
-    startLeaderboardElement.innerHTML = generateLeaderboardHTML('pong');
-};
-
-function drawDashLine() {
-    ctx.beginPath();
-    ctx.setLineDash([10, 15]);
-    ctx.moveTo(canvas.width / 2, 0);
-    ctx.lineTo(canvas.width / 2, canvas.height);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset
-}
-
-function draw() {
-    // Clear
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    drawDashLine();
-
-    // Draw P1 (Neon Pink)
-    ctx.fillStyle = '#ff9ff3';
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#ff9ff3';
-    ctx.fillRect(p1.x, p1.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-
-    // Draw P2 (Neon Blue)
-    ctx.fillStyle = '#48dbfb';
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#48dbfb';
-    ctx.fillRect(p2.x, p2.y, PADDLE_WIDTH, PADDLE_HEIGHT);
-
-    // Draw Ball (White/Cyan glow)
-    ctx.fillStyle = '#fff';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#00d2d3';
-    ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
-    
-    // Reset shadow
-    ctx.shadowBlur = 0;
-}
-
-function drawStartScreen() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.fillStyle = '#ff9ff3';
-    ctx.font = 'bold 30px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#ff9ff3';
-    ctx.fillText('PRESS SPACE TO START', canvas.width / 2, canvas.height / 2);
-    ctx.shadowBlur = 0;
-}
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, releasePointer);
+canvas.addEventListener('pointerleave', event => { if (!pointers.has(event.pointerId) && event.pointerType === 'mouse') targets[0] = null; });
 
 function gameLoop(timestamp) {
-    if (!lastTime) lastTime = timestamp || performance.now();
-    let dt = (timestamp - lastTime) / 16.67;
-    if (dt > 3) dt = 3;
-    lastTime = timestamp;
-
-    if (gameStarted && !gameOver) {
-        update(dt);
-    }
-    draw();
-    animFrame = requestAnimationFrame(gameLoop);
+    clock.advance(timestamp, () => {
+        match.step(input());
+        if (match.phase === 'playing' || match.phase === 'serving' || match.events.length) renderer.step(match);
+        for (const event of match.events) {
+            tone(event.type);
+            if (event.type === 'point') write('announcer', `${playerName(event.side)} scored. ${match.scores[0]} to ${match.scores[1]}.`);
+        }
+    });
+    syncUI(); renderer.draw(match);
+    requestAnimationFrame(gameLoop);
 }
-
-// Input Handlers
-document.addEventListener('keydown', (e) => {
-    // Prevent scrolling
-    if(["Space","ArrowUp","ArrowDown"].indexOf(e.code) > -1) {
-        e.preventDefault();
-    }
-    
-    if (e.code === 'Space' && !gameStarted) {
-        gameStarted = true;
-        resetBall();
-    }
-    
-    if (e.key === 'ArrowUp') keys.ArrowUp = true;
-    if (e.key === 'ArrowDown') keys.ArrowDown = true;
-    if (e.key.toLowerCase() === 'w') keys.w = true;
-    if (e.key.toLowerCase() === 's') keys.s = true;
-});
-
-document.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowUp') keys.ArrowUp = false;
-    if (e.key === 'ArrowDown') keys.ArrowDown = false;
-    if (e.key.toLowerCase() === 'w') keys.w = false;
-    if (e.key.toLowerCase() === 's') keys.s = false;
-});
-
-// Start initially paused
-startLeaderboardElement.innerHTML = generateLeaderboardHTML('pong');
-animFrame = requestAnimationFrame(gameLoop);
-
-// Setup Initials input handler
-hsInitials.addEventListener('keydown', (e) => {
-    e.stopPropagation(); 
-    if (e.key === 'Enter') {
-        hsSubmitBtn.click();
-    }
-});
+renderRecords(); updateSoundButton(); syncUI();
+requestAnimationFrame(gameLoop);

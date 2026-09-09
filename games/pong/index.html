@@ -3,154 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#090e16">
     <title>Cyber Pong</title>
+    <link rel="icon" href="data:,">
     <script>
-        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
+        if (!window.location.pathname.includes('.') && !window.location.pathname.endsWith('/')) {
             const base = document.createElement('base');
             base.href = window.location.pathname + '/';
             document.head.appendChild(base);
         }
     </script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-        }
-
-        #game-container {
-            position: relative;
-        }
-
-        canvas {
-            background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
-            border: 2px solid #00d2d3;
-            border-radius: 12px;
-            box-shadow: 0 0 30px rgba(0, 210, 211, 0.3);
-        }
-
-        #ui {
-            position: absolute;
-            top: 20px;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            gap: 150px;
-            pointer-events: none;
-        }
-
-        .score {
-            font-size: 48px;
-            font-weight: 800;
-            color: rgba(255, 255, 255, 0.8);
-            text-shadow: 0 0 15px rgba(0, 210, 211, 0.5);
-            font-family: monospace;
-        }
-
-        .controls-hint {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: #555;
-            font-size: 14px;
-            letter-spacing: 2px;
-            pointer-events: none;
-        }
-        
-        /* Overlays */
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.85);
-            border-radius: 12px;
-            z-index: 20;
-        }
-
-        .title {
-            color: #00d2d3;
-            font-size: 48px;
-            text-shadow: 0 0 20px rgba(0, 210, 211, 0.6);
-            margin-bottom: 20px;
-            margin-top: 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 18px;
-            font-weight: 800;
-            background: #00d2d3;
-            color: #000;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            background: #fff;
-            box-shadow: 0 5px 15px rgba(0, 210, 211, 0.4);
-        }
-    </style>
+    <link rel="stylesheet" href="style.css?v=court-2">
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="500"></canvas>
-        <div id="ui">
-            <div class="score" id="score-p1">0</div>
-            <div class="score" id="score-p2">0</div>
-        </div>
-        <div class="controls-hint">FIRST TO 5 WINS • W/S FOR P1 • UP/DOWN FOR P2</div>
-        
-        <div id="start-screen" class="overlay">
-            <h1 class="title">Cyber Pong</h1>
-            <h3 style="color:#fff; margin-bottom: 20px;">LONGEST RALLIES</h3>
-            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
-            <button onclick="window.startGame()">START MATCH</button>
-        </div>
-
-        <div id="game-over" class="overlay" style="display:none;">
-            <h2 id="winner-text" style="color: #ff9ff3; font-size: 36px; margin-bottom: 10px;">GAME OVER</h2>
-            <p id="rally-text" style="color: #fff; margin-bottom: 20px;"></p>
-            
-            <div id="game-over-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
-            
-            <div id="hs-input-section" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
-                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);">NEW LONGEST RALLY!</h3>
-                <p style="margin-bottom: 15px; font-weight: bold;">PLEASE ENTER YOUR INITIALS:</p>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <input type="text" id="hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none;">
-                    <button id="hs-submit-btn">SUBMIT</button>
-                </div>
+    <main id="game-container" data-phase="menu">
+        <header class="masthead">
+            <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i></span><div><p class="eyebrow">THE ARCADE / COURT 02</p><h1>CYBER PONG</h1></div></div>
+            <div class="toolbar">
+                <button id="sound-btn" class="quiet" aria-pressed="false">Sound off</button>
+                <button id="pause-btn" class="quiet" disabled>Pause <kbd>P</kbd></button>
             </div>
+        </header>
 
-            <button id="main-menu-btn" onclick="window.showMenu()">MAIN MENU</button>
+        <section class="scoreboard" aria-label="Match score">
+            <div class="player pink"><span id="label-p1">YOU</span><strong id="score-p1">0</strong><div class="score-pips" id="pips-p1" aria-hidden="true"></div></div>
+            <div class="match-info"><span class="eyebrow">FIRST TO 5</span><span id="match-mode">SOLO / NORMAL</span></div>
+            <div class="player cyan"><div class="score-pips" id="pips-p2" aria-hidden="true"></div><strong id="score-p2">0</strong><span id="label-p2">CPU</span></div>
+        </section>
+
+        <div class="court">
+            <canvas id="gameCanvas" width="800" height="500" tabindex="-1" aria-label="Cyber Pong court" aria-describedby="controls-hint">Use W and S or the arrow keys to move your paddle. First to five points wins.</canvas>
+            <div id="serve-notice" class="serve-notice" hidden><span id="serve-label">GET READY</span><strong id="serve-count">2</strong><span id="serve-direction">SERVING RIGHT →</span></div>
+
+            <section id="start-screen" class="overlay menu" aria-labelledby="menu-title">
+                <div class="menu-intro">
+                    <p class="eyebrow"><span class="status-dot"></span> CLASSIC GAME. SHARPER EDGE.</p>
+                    <h2 id="menu-title">FIND YOUR<br><em>ANGLE.</em></h2>
+                    <p class="intro-copy">Own the edge. Build the rally.<br>Five points to settle it.</p>
+                    <div class="shot-diagram" aria-hidden="true"><svg viewBox="0 0 280 80"><path d="M16 70V10" class="diagram-paddle"/><path d="M235 65L29 35 186 8" class="diagram-path"/><circle cx="29" cy="35" r="6"/><path d="m175 5 13 2-10 10" class="diagram-arrow"/></svg><span>AIM WITH THE EDGE · MOVE TO ADD SPIN</span></div>
+                </div>
+                <div class="match-setup">
+                    <fieldset><legend>01 / CHOOSE YOUR MATCH</legend><div class="mode-options">
+                        <label><input type="radio" name="mode" value="solo" checked><span><strong>Solo</strong><small>YOU VS CPU</small></span></label>
+                        <label><input type="radio" name="mode" value="versus"><span><strong>Versus</strong><small>2 PLAYERS</small></span></label>
+                    </div></fieldset>
+                    <fieldset id="difficulty-field"><legend>02 / CPU DIFFICULTY</legend><div class="difficulty-options">
+                        <label><input type="radio" name="difficulty" value="easy"><span>Easy</span></label>
+                        <label><input type="radio" name="difficulty" value="normal" checked><span>Normal</span></label>
+                        <label><input type="radio" name="difficulty" value="hard"><span>Hard</span></label>
+                    </div></fieldset>
+                    <p id="setup-hint" class="setup-hint">W / S or ↑ / ↓ to move.<br>Mouse and touch work too.</p>
+                    <button id="start-btn" class="primary">ENTER COURT <span aria-hidden="true">↗</span></button>
+                    <p class="shortcut">SPACE TO START · P TO PAUSE</p>
+                </div>
+                <div class="records"><p class="eyebrow">LOCAL RALLY RECORDS <span>RETURNS</span></p><ol id="start-leaderboard"></ol></div>
+            </section>
+
+            <section id="pause-screen" class="overlay centered" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden>
+                <p class="eyebrow">TAKE A BREATHER</p><h2 id="pause-title">MATCH PAUSED</h2><p id="pause-reason">Your rally will be right here.</p>
+                <button id="resume-btn" class="primary">RESUME MATCH <span aria-hidden="true">↗</span></button>
+                <button id="pause-menu-btn" class="quiet">End match & return to menu</button>
+            </section>
+
+            <section id="game-over" class="overlay centered" role="dialog" aria-modal="true" aria-labelledby="winner-text" hidden>
+                <p class="eyebrow">MATCH COMPLETE</p><h2 id="winner-text">YOU WIN</h2>
+                <div class="result-stats"><div><strong id="final-score">5 — 0</strong><span>FINAL SCORE</span></div><div><strong id="rally-text">0</strong><span>LONGEST RALLY</span></div></div>
+                <form id="record-form" hidden><label for="hs-initials">A rally worth remembering. Add your initials.</label><div class="record-input"><input id="hs-initials" name="initials" maxlength="3" pattern="[A-Za-z0-9]{1,3}" required autocomplete="off" aria-label="One to three letters or numbers" placeholder="AAA"><button type="submit" class="quiet">Save record</button></div></form>
+                <p id="record-status" role="status"></p>
+                <div class="result-actions"><button id="rematch-btn" class="primary">PLAY AGAIN <span aria-hidden="true">↗</span></button><button id="main-menu-btn" class="quiet">Main menu</button></div>
+            </section>
         </div>
-    </div>
 
-    <script type="module">
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = 'game.js?v=' + new Date().getTime();
-        document.body.appendChild(script);
-    </script>
+        <footer class="match-footer">
+            <div class="rally-meter"><span class="eyebrow">RALLY <strong id="rally-count">00</strong></span><span class="speed-track" aria-hidden="true"><i id="speed-fill"></i></span><span id="speed-label">1.0×</span></div>
+            <p id="controls-hint">W / S or ↑ / ↓ · Mouse / touch · P to pause</p>
+            <span class="best-label">BEST <strong id="best-rally">00</strong></span>
+        </footer>
+        <p id="announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+    </main>
+    <script type="module" src="game.js?v=court-2"></script>
 </body>
 </html>
