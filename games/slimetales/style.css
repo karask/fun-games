@@ -98,6 +98,73 @@ body {
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 
+/* Illustrated title screen; other overlays retain their game styling. */
+#menu-overlay {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #111923;
+    backdrop-filter: none;
+    overflow-y: auto;
+    font-family: system-ui, sans-serif;
+}
+#menu-overlay.hidden { display: none; }
+.menu-art { position: relative; align-self: stretch; min-height: 0; overflow: hidden; }
+.menu-art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.menu-art::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(0deg, #0c1524 0%, transparent 24%, transparent 85%, #0c152433);
+}
+.adventure-badge {
+    position: absolute; bottom: 28px; left: 0; right: 0; z-index: 1;
+    color: #c6f5b0; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 2px;
+}
+.menu-content { padding: 32px; }
+.menu-eyebrow { color: #b5dca8; font-size: 9px; font-weight: 750; letter-spacing: 2px; margin-bottom: 16px; }
+#menu-overlay .game-title {
+    font: 900 64px/.95 system-ui, sans-serif; letter-spacing: -3px;
+    color: #fff4ff; background: none; -webkit-text-fill-color: currentColor;
+    filter: none; animation: none; margin-bottom: 16px;
+}
+#menu-overlay .game-title span { color: #ff91e5; }
+#menu-overlay .game-subtitle { color: #f0d9eb; font-size: 14px; letter-spacing: 0; text-transform: none; margin-bottom: 12px; }
+.menu-description { color: #aebcc9; font-size: 13px; line-height: 1.6; margin-bottom: 24px; }
+#menu-overlay .menu-buttons { flex-direction: column; gap: 10px; margin-bottom: 20px; }
+#menu-overlay .btn {
+    display: flex; justify-content: space-between; align-items: center;
+    font: 750 14px system-ui, sans-serif; letter-spacing: 0;
+    text-transform: none; padding: 14px 20px; border-radius: 8px;
+    box-shadow: none; border: 1px solid transparent;
+}
+#menu-overlay .btn-primary { background: #f599df; color: #35152f; }
+#menu-overlay .btn-blue { background: #1c3040; color: #bce8ff; border-color: #466477; }
+#menu-overlay .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+#menu-overlay .btn:focus-visible { outline: 3px solid #e5ffb8; outline-offset: 4px; }
+#menu-overlay .controls-info { opacity: 1; gap: 28px; margin-top: 0; font-size: 10px; letter-spacing: .5px; }
+#menu-overlay .ctrl-group { text-align: left; }
+#menu-overlay .ctrl-label { color: #d6dfeb; }
+#menu-overlay .ctrl-keys { color: #aebcc9; }
+#menu-overlay .physics-tip {
+    border-top: 1px solid #32404d; padding-top: 14px; margin-top: 16px;
+    max-width: 100%; color: #aebcc9; text-align: left; font-size: 11px; line-height: 1.6;
+}
+@media (max-width: 600px) {
+    body:has(#menu-overlay:not(.hidden)) { overflow: auto; align-items: flex-start; }
+    #game-container:has(#menu-overlay:not(.hidden)) { width: 100%; height: max(760px, 100dvh); border-radius: 0; }
+    #menu-overlay { grid-template-columns: 1fr; grid-template-rows: 280px auto; }
+    .menu-art img { object-fit: contain; background: #080e1c; }
+    .adventure-badge { bottom: 12px; font-size: 8px; }
+    .menu-content { padding: 24px; }
+    #menu-overlay .game-title { font-size: 44px; }
+    #menu-overlay .game-title br { display: none; }
+    #menu-overlay .game-title span::before { content: ' '; }
+    #menu-overlay .menu-buttons { flex-direction: row; }
+    #menu-overlay .btn { flex: 1; padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #menu-overlay .btn { transition: none; }
+    #menu-overlay .btn:hover { transform: none; }
+}
+
 .btn {
     font-family: 'Orbitron', sans-serif;
     font-size: 14px;

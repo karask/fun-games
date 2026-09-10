@@ -13,7 +13,7 @@
             document.head.appendChild(base);
         }
     </script>
-    <link rel="stylesheet" href="style.css?v=soft-body-1">
+    <link rel="stylesheet" href="style.css?v=illustrated-menu-1">
 </head>
 
 <body>
@@ -21,24 +21,32 @@
         <canvas id="gameCanvas" width="800" height="560"></canvas>
 
         <!-- ═══ Menu Overlay ═══ -->
-        <div class="overlay" id="menu-overlay">
-            <div class="game-title">SLIME TALES</div>
-            <div class="game-subtitle">A Gooey Adventure</div>
-            <div class="menu-buttons">
-                <button class="btn btn-primary" id="btn-1p" onclick="window.selectPlayers(1)">1 Player</button>
-                <button class="btn btn-blue" id="btn-2p" onclick="window.selectPlayers(2)">2 Players</button>
+        <div class="overlay" id="menu-overlay" aria-labelledby="menu-title">
+            <div class="menu-art" aria-hidden="true">
+                <img src="../../assets/slimetales_thumb.png" alt="" width="1024" height="1024">
+                <span class="adventure-badge">30 LEVELS OF GOOEY ADVENTURE</span>
             </div>
-            <div class="controls-info">
-                <div class="ctrl-group">
-                    <div class="ctrl-label">Player 1</div>
-                    <div class="ctrl-keys">Arrow Keys</div>
+            <div class="menu-content">
+                <p class="menu-eyebrow">SMALL SLIME. BIG ADVENTURE.</p>
+                <h1 class="game-title" id="menu-title">Slime<br><span>Tales.</span></h1>
+                <p class="game-subtitle">A little courage. A lot of squish.</p>
+                <p class="menu-description">Bounce over danger, squeeze through gaps, and find your way home.</p>
+                <div class="menu-buttons">
+                    <button class="btn btn-primary" id="btn-1p" onclick="window.selectPlayers(1)"><span>1 Player</span><span aria-hidden="true">→</span></button>
+                    <button class="btn btn-blue" id="btn-2p" onclick="window.selectPlayers(2)"><span>2 Players</span><span aria-hidden="true">→</span></button>
                 </div>
-                <div class="ctrl-group">
-                    <div class="ctrl-label">Player 2</div>
-                    <div class="ctrl-keys">W A S D</div>
+                <div class="controls-info">
+                    <div class="ctrl-group">
+                        <div class="ctrl-label">Player 1</div>
+                        <div class="ctrl-keys">Arrow Keys</div>
+                    </div>
+                    <div class="ctrl-group">
+                        <div class="ctrl-label">Player 2</div>
+                        <div class="ctrl-keys">W A S D</div>
+                    </div>
                 </div>
+                <p class="physics-tip">Hold jump to go higher. Hold down to squeeze.<br>Press into a wall to grip. Jump away, or press down to let go.</p>
             </div>
-            <p class="physics-tip">Hold jump to go higher. Hold down to squeeze.<br>Press into a wall to grip. Jump away, or press down to let go.</p>
         </div>
 
         <!-- ═══ Level Select Overlay ═══ -->

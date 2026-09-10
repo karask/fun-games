@@ -25,13 +25,14 @@ button.primary:hover { background: #cfffa0; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 button.utility { font-size: 12px; padding: 8px 12px; min-height: 40px; background: transparent; }
 .utility[aria-pressed="true"] { color: var(--green); border-color: #68814d; }
-#app { max-width: 1040px; margin: 0 auto; padding: 0 24px 24px; }
+#app { max-width: 1040px; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; margin: 0 auto; padding: 0 24px 24px; }
+.topbar { flex-shrink: 0; }
 .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
 .wordmark { color: var(--muted); font-size: 11px; font-weight: 700; text-decoration: none; letter-spacing: 1px; }
 .wordmark > span:first-child { color: var(--green); margin-right: 8px; font-size: 18px; }
 .wordmark-game { color: var(--text); }
 .settings { display: flex; gap: 8px; }
-.menu-screen { display: grid; grid-template-columns: 1.4fr 1fr; gap: 64px; padding: 40px 24px 24px; }
+.menu-screen { display: grid; grid-template-columns: 1.4fr 1fr; gap: 64px; padding: 32px 24px; margin-block: auto; }
 .eyebrow, h2, legend { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; }
 .eyebrow { color: var(--muted); margin: 0 0 20px; }
 h1 { font-size: clamp(64px, 9vw, 100px); line-height: .92; letter-spacing: -6px; font-weight: 850; margin: 0; }
@@ -74,7 +75,7 @@ small { display: block; }
 .scores td:last-child, .scores th:last-child { text-align: right; }
 .scores tbody tr:first-child { color: var(--green); }
 details { margin-top: 16px; font-size: 11px; color: var(--muted); } summary { cursor: pointer; padding: 8px 0; }
-#play-screen { max-width: 804px; margin: 0 auto; }
+#play-screen { width: 100%; max-width: 804px; margin: 0 auto; }
 .hud { display: flex; align-items: center; gap: 24px; min-height: 88px; }
 .player-score { min-width: 80px; font-variant-numeric: tabular-nums; }
 .player-score > span, .round-info > span { display: block; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
