@@ -1,870 +1,534 @@
-// Tiny Dungeon Game Logic
-import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
-
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
-const TILE_SIZE = 32;
-const MAP_WIDTH = Math.floor(canvas.width / TILE_SIZE); // 25
-const MAP_HEIGHT = Math.floor(canvas.height / TILE_SIZE); // 18
-
-// UI Elements
-const startScreen = document.getElementById('start-screen');
-const uiOverlay = document.getElementById('ui-overlay');
-const inventoryScreen = document.getElementById('inventory-screen');
-const msgLog = document.getElementById('msg-log');
-const playerStatsEl = document.getElementById('player-stats');
-const deathMsg = document.getElementById('death-msg');
-const backpackList = document.getElementById('backpack-list');
-const invStatsPanel = document.getElementById('inv-stats-panel');
-
-let gameState = 'START'; // START, PLAYING, INVENTORY, DEATH, WIN
-let currentFloor = 1;
-let messages = [];
-let totalXp = 0;
-
-let map = []; // 0 = floor, 1 = wall, 2 = stairs
-let explored = [];
-let rooms = [];
-let player = null;
-let entities = []; // monsters
-let items = []; // items on floor
-
-// Camera shake / FX
-let screenShake = 0;
-
-// Mouse Tracking for Tooltips
-let mouseX = -1;
-let mouseY = -1;
-
-canvas.addEventListener('mousemove', (e) => {
-    let rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
+import { CLASSES, ITEMS, PERKS, BIOMES } from "./data.mjs";
+import {
+  createRun,
+  act,
+  stats,
+  capacity,
+  perkOptions,
+  message,
+  choose,
+  snapshot,
+  restore,
+  distance,
+} from "./engine.mjs";
+import { createRenderer } from "./renderer.mjs";
+import { createSound } from "./audio.mjs";
+import {
+  getHighScores,
+  isHighScore,
+  saveHighScore,
+} from "../../assets/highscore.js";
+const $ = (id) => document.getElementById(id),
+  renderer = createRenderer($("gameCanvas")),
+  sound = createSound();
+const SAVE = "tinydungeon_run_v1",
+  PROGRESS = "tinydungeon_progress_v1";
+let run = null,
+  aim = null,
+  ended = false,
+  saved = null,
+  progress = { depth: 1, guardians: 0, wins: 0 },
+  lastFocus = null;
+function store(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function remove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+}
+try {
+  saved = restore(localStorage.getItem(SAVE));
+  const p = JSON.parse(localStorage.getItem(PROGRESS));
+  if (p && [p.depth, p.guardians, p.wins].every(Number.isFinite)) progress = p;
+} catch {}
+function unlockLevel() {
+  return progress.guardians > 0 ? 5 : progress.depth >= 4 ? 4 : 0;
+}
+function button(text, fn) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = text;
+  b.addEventListener("click", fn);
+  return b;
+}
+function safeScores() {
+  try {
+    return getHighScores("tinydungeon").filter(
+      (s) => s && typeof s.name === "string" && Number.isFinite(s.score),
+    );
+  } catch {
+    return [];
+  }
+}
+function qualifies() {
+  try {
+    return isHighScore("tinydungeon", run.totalXp);
+  } catch {
+    return false;
+  }
+}
+function records(id) {
+  const el = $(id);
+  el.replaceChildren();
+  const scores = safeScores();
+  if (!scores.length) {
+    el.textContent = "The ledger awaits your first adventurer.";
+    return;
+  }
+  for (const [i, score] of scores.entries()) {
+    const row = document.createElement("p");
+    row.style.cssText =
+      "display:flex;justify-content:space-between;gap:12px;font-size:12px";
+    const name = document.createElement("span"),
+      value = document.createElement("strong");
+    name.textContent = `${i + 1}. ${score.name}`;
+    value.textContent = `${score.score} XP`;
+    row.append(name, value);
+    el.append(row);
+  }
+}
+function syncSound() {
+  $("sound-toggle").textContent = sound.enabled ? "Sound on" : "Sound off";
+  $("sound-toggle").setAttribute("aria-pressed", String(sound.enabled));
+}
+function save() {
+  if (!run || run.status !== "playing") return;
+  const ok = store(SAVE, snapshot(run));
+  saved = ok ? restore(snapshot(run)) : null;
+  $("save-status").textContent = ok
+    ? "Progress saved on this device."
+    : "Saving unavailable in this browser.";
+}
+function perkSummary(perks) {
+  const counts = new Map();
+  for (const id of perks) counts.set(id, (counts.get(id) || 0) + 1);
+  return [...counts]
+    .map(([id, count]) => PERKS[id].name + (count > 1 ? " ×" + count : ""))
+    .join(", ");
+}
+function updateProgress() {
+  const before = unlockLevel();
+  progress.depth = Math.max(progress.depth, run.floor);
+  progress.guardians = Math.max(progress.guardians, run.guardians);
+  if (run.status === "won") progress.wins++;
+  store(PROGRESS, JSON.stringify(progress));
+  return before < unlockLevel();
+}
+function refreshMenu() {
+  records("start-leaderboard");
+  $("resume-run").hidden = !saved;
+  $("resume-run").textContent = saved
+    ? `Continue ${saved.player.class} · floor ${saved.floor}`
+    : "Continue run";
+  $("unlock-status").textContent =
+    unlockLevel() >= 5
+      ? "Unlocked: Second wind & Finisher. Available in future perk choices."
+      : unlockLevel() >= 4
+        ? "Second wind unlocked. Defeat a guardian to unlock Finisher."
+        : "Reach floor 4 to unlock Second wind. Defeat a guardian to unlock Finisher.";
+}
+function closeDialogs() {
+  for (const id of ["inventory-screen", "choice-screen"])
+    if ($(id).open) $(id).close();
+}
+function begin(s) {
+  closeDialogs();
+  run = s;
+  aim = null;
+  ended = false;
+  renderer.reset();
+  $("start-screen").style.display = "none";
+  $("adventure").hidden = false;
+  sound.unlock().then(() => sound.play("start"));
+  update();
+  $("gameCanvas").focus({ preventScroll: true });
+}
+window.startGame = (className) =>
+  begin(
+    createRun(
+      className,
+      $("run-seed").value.trim() || String(Date.now()),
+      unlockLevel(),
+    ),
+  );
+window.backToMenu = () => {
+  closeDialogs();
+  if (run?.status === "playing") save();
+  renderer.pause();
+  run = null;
+  aim = null;
+  $("adventure").hidden = true;
+  $("start-screen").style.display = "flex";
+  $("class-select").style.display = "block";
+  for (const id of [
+    "death-msg",
+    "end-score-display",
+    "end-leaderboard",
+    "end-hs-input",
+    "end-button-container",
+  ])
+    $(id).style.display = "none";
+  $("run-recap").hidden = true;
+  refreshMenu();
+  $("resume-run").hidden
+    ? document
+        .querySelector(".class-btn.Fighter")
+        .focus({ preventScroll: true })
+    : $("resume-run").focus({ preventScroll: true });
+};
+$("resume-run").addEventListener("click", () => {
+  if (saved) begin(restore(snapshot(saved)));
 });
-canvas.addEventListener('mouseout', () => {
-    mouseX = -1; mouseY = -1;
+$("daily-seed").addEventListener("click", () => {
+  $("run-seed").value = `daily-${new Date().toISOString().slice(0, 10)}`;
+  $("save-status").textContent =
+    "Daily seed uses the UTC date. Choose a class to begin.";
 });
-
-// Load Assets
-const imgs = {
-    Fighter: new Image(),
-    Mage: new Image(),
-    Priest: new Image(),
-    Rogue: new Image(),
-    Stairs: new Image(),
-    // Monsters
-    Goblin: new Image(),
-    Skeleton: new Image(),
-    Orc: new Image(),
-    Wraith: new Image(),
-    Giant: new Image(),
-    Lich: new Image(),
-    'Orc Chieftain': new Image()
-};
-imgs.Fighter.src = 'assets/fighter.png';
-imgs.Mage.src = 'assets/mage.png';
-imgs.Priest.src = 'assets/priest.png';
-imgs.Rogue.src = 'assets/rogue.png';
-imgs.Stairs.src = 'assets/stairs.png';
-
-// Load monster images
-imgs.Goblin.src = 'assets/goblin.png';
-imgs.Skeleton.src = 'assets/skeleton.png';
-imgs.Orc.src = 'assets/orc.png';
-imgs.Wraith.src = 'assets/wraith.png';
-imgs.Giant.src = 'assets/giant.png';
-imgs.Lich.src = 'assets/lich.png';
-imgs['Orc Chieftain'].src = 'assets/orc_chieftain.png';
-
-// Data
-const ITEM_TYPES = [
-    { name: 'Health Potion', char: '🧪', type: 'consumable', heal: 20, color: '#e84118' },
-    { name: 'Greater Potion', char: '🍷', type: 'consumable', heal: 50, color: '#c23616' },
-    { name: 'Dagger', char: '🗡️', type: 'weapon', attack: 2, color: '#7f8fa6' },
-    { name: 'Short Sword', char: '⚔️', type: 'weapon', attack: 5, color: '#fbc531' },
-    { name: 'Battle Axe', char: '🪓', type: 'weapon', attack: 8, color: '#e1b12c' },
-    { name: 'Magic Staff', char: '🪄', type: 'weapon', attack: 10, color: '#00a8ff' },
-    { name: 'Leather Armor', char: '🦺', type: 'armor', defense: 3, color: '#e1b12c' },
-    { name: 'Chainmail', char: '⛓️', type: 'armor', defense: 6, color: '#718093' },
-    { name: 'Plate Armor', char: '🛡️', type: 'armor', defense: 12, color: '#f5f6fa' },
-    { name: 'Ring of Power', char: '💍', type: 'accessory', attack: 3, defense: 3, color: '#9c88ff' },
-    { name: 'Amulet of Life', char: '📿', type: 'accessory', maxHp: 20, color: '#4cd137' }
-];
-
-const MONSTER_TYPES = [
-    { name: 'Slime', char: '🟢', color: '#4cd137', hp: 5, attack: 2, defense: 0, xp: 2 },
-    { name: 'Rat', char: '🐀', color: '#7f8fa6', hp: 6, attack: 3, defense: 0, xp: 3 },
-    { name: 'Bat', char: '🦇', color: '#353b48', hp: 4, attack: 4, defense: 0, xp: 3 },
-    { name: 'Goblin', char: '👺', color: '#e1b12c', hp: 10, attack: 4, defense: 1, xp: 5 },
-    { name: 'Skeleton', char: '💀', color: '#f5f6fa', hp: 12, attack: 5, defense: 2, xp: 6 },
-    { name: 'Zombie', char: '🧟', color: '#44bd32', hp: 15, attack: 4, defense: 1, xp: 7 },
-    { name: 'Spider', char: '🕷️', color: '#2f3640', hp: 8, attack: 6, defense: 0, xp: 6 },
-    { name: 'Orc', char: '👹', color: '#4cd137', hp: 20, attack: 6, defense: 2, xp: 10 },
-    { name: 'Wolf', char: '🐺', color: '#7f8fa6', hp: 14, attack: 7, defense: 1, xp: 9 },
-    { name: 'Ghost', char: '👻', color: '#f5f6fa', hp: 10, attack: 8, defense: 4, xp: 12 },
-    { name: 'Troll', char: '🧌', color: '#4cd137', hp: 30, attack: 8, defense: 3, xp: 15 },
-    { name: 'Ogre', char: '🧟‍♂️', color: '#e84118', hp: 35, attack: 10, defense: 2, xp: 18 },
-    { name: 'Vampire', char: '🧛', color: '#8c7ae6', hp: 25, attack: 9, defense: 4, xp: 20 },
-    { name: 'Demon', char: '👿', color: '#c23616', hp: 40, attack: 12, defense: 3, xp: 25 },
-    { name: 'Golem', char: '🗿', color: '#718093', hp: 50, attack: 8, defense: 8, xp: 30 },
-    { name: 'Wraith', char: '🌫️', color: '#dcdde1', hp: 20, attack: 15, defense: 5, xp: 28 },
-    { name: 'Minotaur', char: '🐂', color: '#8c7ae6', hp: 45, attack: 14, defense: 4, xp: 35 },
-    { name: 'Giant', char: '🦶', color: '#e1b12c', hp: 60, attack: 15, defense: 5, xp: 40 },
-    { name: 'Lich', char: '🧙‍♂️', color: '#9c88ff', hp: 40, attack: 20, defense: 5, xp: 50 },
-    { name: 'Dragon Whelp', char: '🦎', color: '#e84118', hp: 55, attack: 16, defense: 6, xp: 45 }
-];
-
-const MINI_BOSSES = [
-    { name: 'Orc Chieftain', char: '🦹', color: '#e84118', hp: 80, attack: 15, defense: 5, xp: 100 },
-    { name: 'Vampire Lord', char: '🧛‍♂️', color: '#8c7ae6', hp: 100, attack: 18, defense: 6, xp: 150 }
-];
-
-const FINAL_BOSSES = [
-    { name: 'Ancient Red Dragon', char: '🐉', color: '#e84118', hp: 250, attack: 25, defense: 10, xp: 500 },
-    { name: 'The Demon King', char: '👹', color: '#c23616', hp: 300, attack: 20, defense: 12, xp: 500 },
-    { name: 'Archlich', char: '💀', color: '#9c88ff', hp: 200, attack: 30, defense: 8, xp: 500 }
-];
-
-function getPlayerTotalStats() {
-    let totals = { attack: player.baseAttack, defense: player.baseDefense, maxHp: player.baseMaxHp };
-    for(let slot in player.equipment) {
-        let eq = player.equipment[slot];
-        if(eq) {
-            if(eq.attack) totals.attack += eq.attack;
-            if(eq.defense) totals.defense += eq.defense;
-            if(eq.maxHp) totals.maxHp += eq.maxHp;
-        }
-    }
-    return totals;
+$("suspend-run").addEventListener("click", window.backToMenu);
+$("sound-toggle").addEventListener("click", () =>
+  sound.toggle().then(syncSound),
+);
+function finish() {
+  if (ended) return;
+  ended = true;
+  closeDialogs();
+  remove(SAVE);
+  saved = null;
+  const unlocked = updateProgress();
+  $("adventure").hidden = true;
+  $("start-screen").style.display = "flex";
+  $("class-select").style.display = "none";
+  renderer.pause();
+  $("death-msg").style.display = "block";
+  $("death-msg").style.color = run.status === "won" ? "#d7cc91" : "#e6ac96";
+  $("death-msg").textContent =
+    run.status === "won" ? "The darkness is broken." : "Your story ends here.";
+  $("end-score-display").style.display = "block";
+  $("final-score-val").textContent = run.totalXp;
+  const p = run.player;
+  $("run-recap").hidden = false;
+  $("run-recap").textContent =
+    `${p.class} · Floor ${run.floor}/10 · Level ${p.level} · ${run.turn} turns · ${run.kills} foes\n${run.cause}\nBuild: ${Object.values(
+      p.equipment,
+    )
+      .filter(Boolean)
+      .map((id) => ITEMS[id].name)
+      .join(
+        ", ",
+      )}${p.perks.length ? " · " + perkSummary(p.perks) : ""}\nSeed: ${run.seed}${unlocked ? "\nNew perk unlocked for your next adventure." : ""}`;
+  $("end-button-container").style.display = "block";
+  $("end-leaderboard").style.display = "block";
+  records("end-leaderboard");
+  const input = $("end-hs-input");
+  input.style.display = qualifies() ? "flex" : "none";
+  $("end-hs-initials").value = "";
+  // Main menu is always available: entering initials is optional.
+  $("end-button-container").querySelector("button").textContent =
+    "Skip / Main menu";
+  if (input.style.display === "flex")
+    $("end-hs-initials").focus({ preventScroll: true });
+  else
+    $("end-button-container")
+      .querySelector("button")
+      .focus({ preventScroll: true });
 }
-
-// System Helpers
-function logMsg(text, type = 'default') {
-    messages.push({ text, type });
-    if (messages.length > 5) messages.shift();
-    renderMessages();
+function submitScore() {
+  if (!run || !ended || $("end-hs-input").style.display === "none") return;
+  const name =
+    $("end-hs-initials")
+      .value.toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 3) || "YOU";
+  try {
+    saveHighScore("tinydungeon", name, run.totalXp);
+  } catch {
+    $("run-recap").textContent +=
+      "\nScore storage is unavailable in this browser.";
+  }
+  $("end-hs-input").style.display = "none";
+  records("end-leaderboard");
+  $("end-button-container").querySelector("button").textContent = "Main menu";
 }
-
-function renderMessages() {
-    msgLog.innerHTML = '';
-    messages.forEach(m => {
-        const p = document.createElement('p');
-        p.textContent = m.text;
-        if (m.type === 'good') p.className = 'msg-good';
-        else if (m.type === 'bad') p.className = 'msg-bad';
-        else if (m.type === 'info') p.className = 'msg-info';
-        msgLog.appendChild(p);
-    });
-}
-
-function updateHUD() {
-    if (!player) return;
-    let stats = getPlayerTotalStats();
-    playerStatsEl.textContent = `HP: ${player.hp}/${stats.maxHp} | Lvl: ${player.level} | XP: ${player.xp}/${player.nextXp} | Floor: ${currentFloor}`;
-}
-
-window.startGame = function(className) {
-    if(gameState === 'DEATH' || gameState === 'WIN') {
-        currentFloor = 1; messages = []; totalXp = 0;
-    }
-    
-    document.getElementById('start-leaderboard').style.display = 'none';
-    document.getElementById('end-leaderboard').style.display = 'none';
-    document.getElementById('end-score-display').style.display = 'none';
-    document.getElementById('end-hs-input').style.display = 'none';
-    document.getElementById('end-button-container').style.display = 'none';
-    
-    startScreen.style.display = 'none';
-    uiOverlay.style.display = 'flex';
-    inventoryScreen.style.display = 'none';
-    deathMsg.style.display = 'none';
-    gameState = 'PLAYING';
-    
-    initPlayer(className);
-    generateFloor();
-}
-
-window.backToMenu = function() {
-    startScreen.style.display = 'flex';
-    document.getElementById('class-select').style.display = 'block';
-    
-    document.getElementById('start-leaderboard').style.display = 'block';
-    document.getElementById('start-leaderboard').innerHTML = generateLeaderboardHTML('tinydungeon');
-    
-    deathMsg.style.display = 'none';
-    document.getElementById('end-leaderboard').style.display = 'none';
-    document.getElementById('end-score-display').style.display = 'none';
-    document.getElementById('end-hs-input').style.display = 'none';
-    document.getElementById('end-button-container').style.display = 'none';
-    gameState = 'START';
-};
-
-function initPlayer(className) {
-    player = {
-        x: 0, y: 0, renderX: 0, renderY: 0,
-        animOffsetX: 0, animOffsetY: 0, damageFlash: 0,
-        className,
-        baseMaxHp: 20, hp: 20, baseAttack: 5, baseDefense: 2,
-        level: 1, xp: 0, nextXp: 10,
-        inventory: [],
-        equipment: { weapon: null, armor: null, accessory: null },
-        color: '#fff', char: '@', dead: false
-    };
-
-    switch(className) {
-        case 'Fighter':
-            player.baseMaxHp = 30; player.hp = 30; player.baseAttack = 6; player.baseDefense = 4;
-            player.inventory.push({...ITEM_TYPES[3]});
-            break;
-        case 'Mage':
-            player.baseMaxHp = 15; player.hp = 15; player.baseAttack = 8; player.baseDefense = 1;
-            player.inventory.push({...ITEM_TYPES[5]});
-            break;
-        case 'Priest':
-            player.baseMaxHp = 20; player.hp = 20; player.baseAttack = 4; player.baseDefense = 3;
-            player.inventory.push({...ITEM_TYPES[0]});
-            break;
-        case 'Rogue':
-            player.baseMaxHp = 18; player.hp = 18; player.baseAttack = 5; player.baseDefense = 2;
-            player.inventory.push({...ITEM_TYPES[2]});
-            break;
-    }
-}
-
-function generateFloor() {
-    map = []; explored = []; rooms = []; entities = []; items = [];
-    for(let y = 0; y < MAP_HEIGHT; y++) {
-        let row = []; let expRow = [];
-        for(let x = 0; x < MAP_WIDTH; x++) { row.push(1); expRow.push(false); }
-        map.push(row); explored.push(expRow);
-    }
-    
-    const MAX_ROOMS = 8 + Math.floor(currentFloor / 2);
-    const MIN_SIZE = 4; const MAX_SIZE = 8;
-    
-    for(let i=0; i<MAX_ROOMS; i++) {
-        let w = Math.floor(Math.random() * (MAX_SIZE - MIN_SIZE + 1)) + MIN_SIZE;
-        let h = Math.floor(Math.random() * (MAX_SIZE - MIN_SIZE + 1)) + MIN_SIZE;
-        let x = Math.floor(Math.random() * (MAP_WIDTH - w - 1)) + 1;
-        let y = Math.floor(Math.random() * (MAP_HEIGHT - h - 1)) + 1;
-        
-        let newRoom = { x, y, w, h };
-        let failed = false;
-        
-        for(let other of rooms) {
-            if(x < other.x + other.w + 1 && x + w + 1 > other.x &&
-               y < other.y + other.h + 1 && y + h + 1 > other.y) {
-                failed = true; break;
-            }
-        }
-        
-        if(!failed) {
-            createRoom(newRoom);
-            let centerLocation = {x: Math.floor(x + w/2), y: Math.floor(y + h/2)};
-            if(rooms.length === 0) {
-                player.x = centerLocation.x; player.y = centerLocation.y;
-                player.renderX = player.x; player.renderY = player.y;
-            } else {
-                let prevCenter = {
-                    x: Math.floor(rooms[rooms.length-1].x + rooms[rooms.length-1].w/2),
-                    y: Math.floor(rooms[rooms.length-1].y + rooms[rooms.length-1].h/2)
-                };
-                createCorridor(prevCenter, centerLocation);
-            }
-            rooms.push(newRoom);
-        }
-    }
-    
-    let lastRoom = rooms[rooms.length - 1];
-    if (currentFloor === 10) {
-        spawnFinalBoss(lastRoom);
-    } else {
-        map[Math.floor(lastRoom.y + lastRoom.h/2)][Math.floor(lastRoom.x + lastRoom.w/2)] = 2; // Stairs
-        if (currentFloor === 4 || currentFloor === 8) spawnMiniBoss(lastRoom);
-        spawnMonsters();
-    }
-    
-    // Rare floor drops (50% chance for just 1 per floor)
-    let floorDrops = Math.random() < 0.5 ? 1 : 0;
-    for(let i=0; i<floorDrops; i++) {
-        let r = rooms[Math.floor(Math.random() * rooms.length)];
-        dropItem(r.x + Math.floor(Math.random()*r.w), r.y + Math.floor(Math.random()*r.h));
-    }
-    
-    logMsg(`Entered floor ${currentFloor}...`, 'info');
-    updateFOV(); updateHUD();
-}
-
-function createRoom(room) {
-    for(let y = room.y; y < room.y + room.h; y++) {
-        for(let x = room.x; x < room.x + room.w; x++) map[y][x] = 0;
-    }
-}
-
-function createCorridor(c1, c2) {
-    let x = c1.x; let y = c1.y;
-    while(x !== c2.x) { map[y][x] = 0; x += (x < c2.x) ? 1 : -1; }
-    while(y !== c2.y) { map[y][x] = 0; y += (y < c2.y) ? 1 : -1; }
-}
-
-function spawnMonsters() {
-    let maxIndex = Math.min(MONSTER_TYPES.length - 1, currentFloor * 2 + 1);
-    let minIndex = Math.max(0, currentFloor * 2 - 4);
-    let numMonsters = Math.floor(Math.random() * 3) + 3 + Math.floor(currentFloor / 2);
-    
-    for(let i=0; i<numMonsters; i++) {
-        let room = rooms[Math.floor(Math.random()*(rooms.length-1)) + 1];
-        let typeInfo = MONSTER_TYPES[Math.floor(Math.random()*(maxIndex-minIndex+1))+minIndex];
-        let mx = Math.floor(Math.random() * (room.w-2)) + room.x + 1;
-        let my = Math.floor(Math.random() * (room.h-2)) + room.y + 1;
-        entities.push({
-            ...typeInfo, x: mx, y: my, renderX: mx, renderY: my,
-            animOffsetX: 0, animOffsetY: 0, damageFlash: 0,
-            maxHp: typeInfo.hp
-        });
-    }
-}
-
-function spawnMiniBoss(room) {
-    let typeInfo = MINI_BOSSES[currentFloor === 4 ? 0 : 1];
-    let mx = room.x + Math.floor(room.w/2); let my = room.y + Math.floor(room.h/2);
-    entities.push({
-        ...typeInfo, x: mx, y: my, renderX: mx, renderY: my,
-        animOffsetX: 0, animOffsetY: 0, damageFlash: 0,
-        maxHp: typeInfo.hp, isBoss: true
-    });
-    logMsg("You feel a dangerous presence...", 'bad');
-}
-
-function spawnFinalBoss(room) {
-    let boss = FINAL_BOSSES[Math.floor(Math.random() * FINAL_BOSSES.length)];
-    let mx = room.x + Math.floor(room.w/2); let my = room.y + Math.floor(room.h/2);
-    entities.push({
-        ...boss, x: mx, y: my, renderX: mx, renderY: my,
-        animOffsetX: 0, animOffsetY: 0, damageFlash: 0,
-        maxHp: boss.hp, isBoss: true, isFinal: true
-    });
-    logMsg(`The ${boss.name} awaits you!`, 'bad');
-}
-
-function dropItem(x, y) {
-    let itemTemplate = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
-    items.push({ ...itemTemplate, x, y, renderYOffset: 0, bounceDir: 1 });
-}
-
-function updateFOV() {
-    const RADIUS = 6;
-    for(let y = 0; y < MAP_HEIGHT; y++) {
-        for(let x = 0; x < MAP_WIDTH; x++) {
-            if(Math.hypot(player.x - x, player.y - y) <= RADIUS) explored[y][x] = true;
-        }
-    }
-}
-
-function pickupItems(x, y) {
-    for(let i = items.length - 1; i >= 0; i--) {
-        let item = items[i];
-        if(item.x === x && item.y === y) {
-            if(player.inventory.length < 20) {
-                player.inventory.push({...item});
-                logMsg(`Picked up ${item.name}.`, 'good');
-                items.splice(i, 1);
-            } else {
-                logMsg(`Inventory full! Drop an item to pick up ${item.name}.`, 'bad');
-            }
-        }
-    }
-}
-
-function movePlayer(dx, dy) {
-    if(player.dead) return;
-    
-    let newX = player.x + dx;
-    let newY = player.y + dy;
-    
-    if(newX < 0 || newX >= MAP_WIDTH || newY < 0 || newY >= MAP_HEIGHT) return;
-    if(map[newY][newX] === 1) {
-        player.animOffsetX = dx * 0.3;
-        player.animOffsetY = dy * 0.3;
-        return;
-    }
-    
-    let enemy = entities.find(e => e.x === newX && e.y === newY);
-    if(enemy) {
-        attackEntity(player, enemy, dx, dy);
-    } else {
-        player.x = newX; player.y = newY;
-        pickupItems(newX, newY);
-        if(map[player.y][player.x] === 2) {
-            descendStairs(); return;
-        }
-    }
-    tickGame();
-}
-
-function attackEntity(attacker, defender, dx, dy) {
-    let attTotal = attacker === player ? getPlayerTotalStats().attack : attacker.attack;
-    let defTotal = defender === player ? getPlayerTotalStats().defense : defender.defense;
-    
-    let damage = Math.max(1, attTotal - defTotal);
-    damage = Math.floor(damage * (0.8 + Math.random() * 0.4));
-    if(damage < 1 && Math.random() < 0.2) damage = 1; 
-    
-    defender.hp -= damage;
-    defender.damageFlash = 15;
-    
-    if (dx !== undefined && dy !== undefined) {
-        attacker.animOffsetX = dx * 0.5;
-        attacker.animOffsetY = dy * 0.5;
-    } else {
-        attacker.animOffsetX = (defender.x - attacker.x) * 0.5;
-        attacker.animOffsetY = (defender.y - attacker.y) * 0.5;
-    }
-    
-    if(attacker === player) {
-        screenShake = damage * 0.5; 
-        logMsg(`You hit ${defender.name} for ${damage} dmg.`);
-        if(defender.hp <= 0) killEnemy(defender);
-    } else {
-        screenShake = damage; 
-        logMsg(`${attacker.name} hits you for ${damage} dmg!`, 'bad');
-        if(player.hp <= 0) killPlayer();
-    }
-}
-
-function killEnemy(enemy) {
-    logMsg(`You killed ${enemy.name}!`, 'good');
-    entities = entities.filter(e => e !== enemy);
-    
-    player.xp += enemy.xp;
-    totalXp += enemy.xp;
-    if(player.xp >= player.nextXp) levelUp();
-    
-    // Extremely rare drops! 3% chance for normal enemies, 100% for bosses
-    if(Math.random() < 0.03 || enemy.isBoss) dropItem(enemy.x, enemy.y);
-    if(enemy.isFinal) winGame();
-}
-
-function levelUp() {
-    player.level++; player.xp -= player.nextXp; player.nextXp = Math.floor(player.nextXp * 1.5);
-    player.baseMaxHp += 5; player.hp = getPlayerTotalStats().maxHp;
-    player.baseAttack += 2; player.baseDefense += 1;
-    logMsg(`Level Up! You are now level ${player.level}.`, 'good');
-}
-
-function handleEndGame(isWin) {
-    gameState = isWin ? 'WIN' : 'DEATH';
-    setTimeout(() => {
-        uiOverlay.style.display = 'none'; 
-        startScreen.style.display = 'flex';
-        document.getElementById('class-select').style.display = 'none';
-        
-        deathMsg.style.display = 'block';
-        deathMsg.style.color = isWin ? '#fbc531' : '#e84118';
-        deathMsg.innerHTML = isWin ? 'VICTORY!<br><span style="font-size:18px; color:#fff;">You have conquered the Tiny Dungeon!</span>' : 'You have died!<br><span style="font-size:18px; color:#fff;">Better luck next time.</span>';
-        
-        document.getElementById('end-score-display').style.display = 'block';
-        document.getElementById('final-score-val').textContent = totalXp;
-        document.getElementById('end-button-container').style.display = 'flex';
-        
-        // Hide start leaderboard
-        document.getElementById('start-leaderboard').style.display = 'none';
-        
-        const uiInputSectionId = 'end-hs-input';
-        const uiInitialsId = 'end-hs-initials';
-        const uiSubmitId = 'end-hs-submit';
-        const uiLeaderboardId = 'end-leaderboard';
-        const uiInputBtnContainerId = 'end-button-container';
-        
-        const inputEl = document.getElementById(uiInitialsId);
-        if (!inputEl.dataset.listener) {
-            inputEl.addEventListener('keydown', (e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter') document.getElementById(uiSubmitId).click();
-            });
-            inputEl.dataset.listener = 'true';
-        }
-        
-        if (isHighScore('tinydungeon', totalXp)) {
-            document.getElementById(uiInputBtnContainerId).style.display = 'none';
-            document.getElementById(uiLeaderboardId).style.display = 'none';
-            document.getElementById(uiInputSectionId).style.display = 'flex';
-            inputEl.value = '';
-            
-            document.getElementById(uiSubmitId).onclick = () => {
-                const initials = inputEl.value.trim().toUpperCase().substring(0, 3);
-                if (initials.length > 0) {
-                    saveHighScore('tinydungeon', initials, totalXp);
-                    document.getElementById(uiInputSectionId).style.display = 'none';
-                    document.getElementById(uiInputBtnContainerId).style.display = 'flex';
-                    document.getElementById(uiLeaderboardId).style.display = 'block';
-                    document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('tinydungeon');
-                }
-            };
-        } else {
-            document.getElementById(uiInputBtnContainerId).style.display = 'flex';
-            document.getElementById(uiInputSectionId).style.display = 'none';
-            document.getElementById(uiLeaderboardId).style.display = 'block';
-            document.getElementById(uiLeaderboardId).innerHTML = generateLeaderboardHTML('tinydungeon');
-        }
-    }, 500);
-}
-
-function killPlayer() {
-    player.dead = true;
-    handleEndGame(false);
-}
-
-function winGame() {
-    handleEndGame(true);
-}
-
-function descendStairs() {
-    player.renderX = player.x; player.renderY = player.y;
-    currentFloor++; generateFloor();
-}
-
-function skipTurn() { tickGame(); }
-
-// Inventory System
-window.toggleInventory = function() {
-    if(gameState === 'PLAYING') {
-        gameState = 'INVENTORY';
-        uiOverlay.style.display = 'none';
-        inventoryScreen.style.display = 'flex';
-        renderInventory();
-    } else if (gameState === 'INVENTORY') {
-        gameState = 'PLAYING';
-        uiOverlay.style.display = 'flex';
-        inventoryScreen.style.display = 'none';
-        updateHUD();
-    }
-}
-
-window.deleteItem = function(index) {
-    if(gameState !== 'INVENTORY') return;
-    let item = player.inventory[index];
-    player.inventory.splice(index, 1);
-    logMsg(`Dropped ${item.name}.`, 'bad');
-    renderInventory();
-};
-
-function renderInventory() {
-    let stats = getPlayerTotalStats();
-    invStatsPanel.innerHTML = `
-        <strong>Stats:</strong><br>
-        HP: ${player.hp} / ${stats.maxHp}<br>
-        Attack: ${stats.attack}<br>
-        Defense: ${stats.defense}<br>
-    `;
-    
-    document.getElementById('eq-weapon').innerHTML = player.equipment.weapon ? 
-        `<span style="color:${player.equipment.weapon.color}">${player.equipment.weapon.char} ${player.equipment.weapon.name}</span>` : 'None';
-    document.getElementById('eq-armor').innerHTML = player.equipment.armor ? 
-        `<span style="color:${player.equipment.armor.color}">${player.equipment.armor.char} ${player.equipment.armor.name}</span>` : 'None';
-    document.getElementById('eq-accessory').innerHTML = player.equipment.accessory ? 
-        `<span style="color:${player.equipment.accessory.color}">${player.equipment.accessory.char} ${player.equipment.accessory.name}</span>` : 'None';
-
-    backpackList.innerHTML = '';
-    player.inventory.forEach((item, index) => {
-        let div = document.createElement('div');
-        div.className = 'item-row';
-        div.style.display = 'flex';
-        div.style.alignItems = 'center';
-        
-        let label = `<span style="flex:1; cursor:pointer;" onclick="useItem(${index})">${item.char} ${item.name}`;
-        if(item.type === 'consumable') label += ` <span style="font-size:12px;color:#4cd137;">Heal ${item.heal}</span>`;
-        else if(item.type === 'weapon') label += ` <span style="font-size:12px;color:#fbc531;">+${item.attack} Atk</span>`;
-        else if(item.type === 'armor') label += ` <span style="font-size:12px;color:#fbc531;">+${item.defense} Def</span>`;
-        else if(item.type === 'accessory') label += ` <span style="font-size:12px;color:#fbc531;">Stat+</span>`;
-        label += `</span>`;
-        
-        let delBtn = `<button onclick="deleteItem(${index})" style="padding: 4px 8px; font-size: 10px; background: #e84118; margin-left: 10px; border-radius: 4px;">DROP</button>`;
-        
-        div.innerHTML = label + delBtn;
-        backpackList.appendChild(div);
-    });
-}
-
-window.useItem = function(index) {
-    let item = player.inventory[index];
-    if(item.type === 'consumable') {
-        player.hp += item.heal;
-        let stats = getPlayerTotalStats();
-        if(player.hp > stats.maxHp) player.hp = stats.maxHp;
-        logMsg(`You used ${item.name} and healed.`, 'good');
-        player.inventory.splice(index, 1);
-    } else {
-        let eqSlot = item.type; let oldItem = player.equipment[eqSlot];
-        player.inventory.splice(index, 1);
-        if(oldItem) player.inventory.push(oldItem);
-        player.equipment[eqSlot] = item;
-        logMsg(`Equipped ${item.name}.`, 'info');
-    }
-    
-    let stats = getPlayerTotalStats();
-    if(player.hp > stats.maxHp) player.hp = stats.maxHp;
-    renderInventory();
-}
-
-function tickGame() {
-    if(player.dead) return;
-    
-    for(let enemy of entities) {
-        if(enemy.hp <= 0) continue;
-        let dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-        let acted = false;
-        
-        if(dist <= 1.5) {
-            attackEntity(enemy, player); acted = true;
-        } else if(dist < 5) {
-            let dx = player.x > enemy.x ? 1 : (player.x < enemy.x ? -1 : 0);
-            let dy = player.y > enemy.y ? 1 : (player.y < enemy.y ? -1 : 0);
-            
-            if(dx !== 0 && dy !== 0) {
-                if(map[enemy.y + dy][enemy.x + dx] === 0 && !getEnemyAt(enemy.x + dx, enemy.y + dy)) {
-                    enemy.x += dx; enemy.y += dy; acted = true;
-                }
-            }
-            if(!acted && dx !== 0 && map[enemy.y][enemy.x + dx] === 0 && !getEnemyAt(enemy.x + dx, enemy.y)) {
-                enemy.x += dx; acted = true;
-            } else if(!acted && dy !== 0 && map[enemy.y + dy][enemy.x] === 0 && !getEnemyAt(enemy.x, enemy.y + dy)) {
-                enemy.y += dy; acted = true;
-            }
-        }
-    }
-    updateFOV(); updateHUD();
-}
-
-function getEnemyAt(x, y) { return entities.find(e => e.x === x && e.y === y); }
-
-// Rendering Loop
-function renderLoop() {
-    requestAnimationFrame(renderLoop);
-    
-    if (gameState === 'START' && !player) {
-         ctx.fillStyle = '#111';
-         ctx.fillRect(0, 0, canvas.width, canvas.height);
-         return;
-    }
-    
-    // Interpolation for smooth movements
-    if(player) {
-        player.renderX += (player.x - player.renderX) * 0.3;
-        player.renderY += (player.y - player.renderY) * 0.3;
-        player.animOffsetX *= 0.6;
-        player.animOffsetY *= 0.6;
-        if(player.damageFlash > 0) player.damageFlash--;
-    }
-    
-    entities.forEach(e => {
-        e.renderX += (e.x - e.renderX) * 0.3;
-        e.renderY += (e.y - e.renderY) * 0.3;
-        e.animOffsetX *= 0.6;
-        e.animOffsetY *= 0.6;
-        if(e.damageFlash > 0) e.damageFlash--;
-    });
-    
-    if(screenShake > 0.5) screenShake *= 0.8;
-    else screenShake = 0;
-    
-    let shakeX = (Math.random() - 0.5) * screenShake * 5;
-    let shakeY = (Math.random() - 0.5) * screenShake * 5;
-
-    ctx.save();
-    ctx.translate(shakeX, shakeY);
-
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    if(map.length === 0) { ctx.restore(); return; }
-    
-    for(let y = 0; y < MAP_HEIGHT; y++) {
-        for(let x = 0; x < MAP_WIDTH; x++) {
-            if(!explored[y]?.[x]) continue;
-            
-            let isVisible = Math.hypot(player.x - x, player.y - y) <= 6;
-            let drawX = x * TILE_SIZE; let drawY = y * TILE_SIZE;
-            
-            if (map[y][x] === 1) {
-                ctx.fillStyle = isVisible ? '#2f3640' : '#1e272e';
-                ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
-                
-                // Draw black line on boundaries with floors
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 2;
-                if (y > 0 && map[y-1][x] === 0) { ctx.beginPath(); ctx.moveTo(drawX, drawY); ctx.lineTo(drawX + TILE_SIZE, drawY); ctx.stroke(); }
-                if (y < MAP_HEIGHT-1 && map[y+1][x] === 0) { ctx.beginPath(); ctx.moveTo(drawX, drawY + TILE_SIZE); ctx.lineTo(drawX + TILE_SIZE, drawY + TILE_SIZE); ctx.stroke(); }
-                if (x > 0 && map[y][x-1] === 0) { ctx.beginPath(); ctx.moveTo(drawX, drawY); ctx.lineTo(drawX, drawY + TILE_SIZE); ctx.stroke(); }
-                if (x < MAP_WIDTH-1 && map[y][x+1] === 0) { ctx.beginPath(); ctx.moveTo(drawX + TILE_SIZE, drawY); ctx.lineTo(drawX + TILE_SIZE, drawY + TILE_SIZE); ctx.stroke(); }
-                
-            } else if (map[y][x] === 0) {
-                ctx.fillStyle = isVisible ? '#353b48' : '#2f3640';
-                ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
-                if(isVisible && (x+y)%2===0) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                    ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE);
-                }
-            } else if (map[y][x] === 2) {
-                ctx.fillStyle = '#1e272e';
-                ctx.fillRect(drawX, drawY, TILE_SIZE, TILE_SIZE); 
-                if(isVisible) {
-                    if (imgs.Stairs.complete && imgs.Stairs.naturalHeight !== 0) {
-                        ctx.drawImage(imgs.Stairs, drawX, drawY, TILE_SIZE, TILE_SIZE);
-                    } else {
-                        // fallback
-                        ctx.fillStyle = '#0a0a0a';
-                        ctx.font = '24px Inter, sans-serif';
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                        ctx.fillText('🕳️', drawX + TILE_SIZE/2, drawY + TILE_SIZE/2);
-                    }
-                }
-            }
-        }
-    }
-    
-    // Draw Items
-    let time = Date.now() / 200;
-    for(let item of items) {
-        if(explored[item.y]?.[item.x]) {
-            let isVisible = Math.hypot(player.x - item.x, player.y - item.y) <= 6;
-            if(isVisible) {
-                let bounce = Math.sin(time + item.x) * 4;
-                ctx.fillStyle = item.color;
-                ctx.font = '20px Arial';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(item.char, item.x * TILE_SIZE + TILE_SIZE/2, item.y * TILE_SIZE + 4 + TILE_SIZE/2 + bounce);
-            }
-        }
-    }
-    
-    // Draw Entities
-    for(let e of entities) {
-        if(explored[Math.floor(e.renderY)]?.[Math.floor(e.renderX)]) {
-            let isVisible = Math.hypot(player.x - e.x, player.y - e.y) <= 6;
-            if(isVisible) {
-                let rx = (e.renderX + e.animOffsetX) * TILE_SIZE;
-                let ry = (e.renderY + e.animOffsetY) * TILE_SIZE;
-                
-                let mImg = imgs[e.name];
-                if(mImg && mImg.complete && mImg.naturalHeight !== 0) {
-                    ctx.drawImage(mImg, rx, ry, TILE_SIZE, TILE_SIZE);
-                } else {
-                    ctx.fillStyle = e.damageFlash > 0 ? '#fff' : e.color;
-                    ctx.font = e.isBoss ? '30px Arial' : '24px Arial';
-                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillText(e.char, rx + TILE_SIZE/2, ry + TILE_SIZE/2);
-                }
-                
-                // HP Bar
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(rx + 4, ry + 2, TILE_SIZE - 8, 4);
-                ctx.fillStyle = '#e84118';
-                ctx.fillRect(rx + 4, ry + 2, (TILE_SIZE - 8) * (Math.max(0, e.hp) / e.maxHp), 4);
-            }
-        }
-    }
-    
-    // Draw Player
-    if (player && !player.dead) {
-        let rx = (player.renderX + player.animOffsetX) * TILE_SIZE;
-        let ry = (player.renderY + player.animOffsetY) * TILE_SIZE;
-        
-        if (player.damageFlash > 0) {
-             // draw red overlay logic if we are using an image
-             ctx.globalAlpha = 0.5;
-             ctx.fillStyle = '#ff4757';
-             ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
-             ctx.globalAlpha = 1.0;
-        }
-        
-        let pImg = imgs[player.className];
-        if(pImg && pImg.complete && pImg.naturalHeight !== 0) {
-             ctx.drawImage(pImg, rx, ry, TILE_SIZE, TILE_SIZE);
-        } else {
-             ctx.fillStyle = player.color;
-             ctx.font = '24px Arial';
-             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-             ctx.fillText(player.char, rx + TILE_SIZE/2, ry + TILE_SIZE/2);
-        }
-    }
-    
-    // Draw Tooltip if hovering over valid coordinates
-    if (mouseX >= 0 && mouseY >= 0 && gameState === 'PLAYING' && map.length > 0) {
-        let gridX = Math.floor(mouseX / TILE_SIZE);
-        let gridY = Math.floor(mouseY / TILE_SIZE);
-        if (explored[gridY]?.[gridX]) {
-            let tooltipText = "";
-            let enemyHover = entities.find(e => e.x === gridX && e.y === gridY);
-            if (enemyHover) {
-                tooltipText = `${enemyHover.name} (HP: ${Math.max(0, enemyHover.hp)}/${enemyHover.maxHp}) | Atk: ${enemyHover.attack} | Def: ${enemyHover.defense}`;
-            } else {
-                let itemHover = items.find(i => i.x === gridX && i.y === gridY);
-                if (itemHover) {
-                    tooltipText = `${itemHover.name} `;
-                    if(itemHover.type === 'consumable') tooltipText += `(Heal ${itemHover.heal})`;
-                    else if(itemHover.type === 'weapon') tooltipText += `(+${itemHover.attack} Atk)`;
-                    else if(itemHover.type === 'armor') tooltipText += `(+${itemHover.defense} Def)`;
-                    else tooltipText += `(Stat+)`;
-                }
-            }
-            
-            if (tooltipText !== "") {
-                ctx.fillStyle = 'rgba(0,0,0,0.85)';
-                let tw = ctx.measureText(tooltipText).width + 20;
-                let th = 30;
-                
-                // Keep tooltip on screen
-                let drawTx = mouseX + 15;
-                let drawTy = mouseY + 15;
-                if (drawTx + tw > canvas.width) drawTx = canvas.width - tw - 5;
-                if (drawTy + th > canvas.height) drawTy = canvas.height - th - 5;
-                
-                ctx.fillRoundedRect(drawTx, drawTy, tw, th, 5); // polyfill below
-                ctx.fillStyle = '#fbc531';
-                ctx.font = '14px Inter, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(tooltipText, drawTx + 10, drawTy + 15);
-            }
-        }
-    }
-    
-    ctx.restore();
-}
-
-// Helper polyfill for round rect if missing
-CanvasRenderingContext2D.prototype.fillRoundedRect = function(x, y, w, h, r) {
-    this.beginPath();
-    this.moveTo(x + r, y);
-    this.arcTo(x + w, y, x + w, y + h, r);
-    this.arcTo(x + w, y + h, x, y + h, r);
-    this.arcTo(x, y + h, x, y, r);
-    this.arcTo(x, y, x + w, y, r);
-    this.closePath();
-    this.fill();
-};
-
-requestAnimationFrame(renderLoop);
-
-// Input handling
-document.addEventListener('keydown', (e) => {
-    if(e.code === 'KeyI' || e.key === 'i') {
-        if(gameState === 'PLAYING' || gameState === 'INVENTORY') toggleInventory();
-        return;
-    }
-    if (gameState !== 'PLAYING') return;
-    let acted = false;
-    if (e.code === 'KeyW' || e.code === 'ArrowUp') { movePlayer(0, -1); acted = true; }
-    else if (e.code === 'KeyS' || e.code === 'ArrowDown') { movePlayer(0, 1); acted = true; }
-    else if (e.code === 'KeyA' || e.code === 'ArrowLeft') { movePlayer(-1, 0); acted = true; }
-    else if (e.code === 'KeyD' || e.code === 'ArrowRight') { movePlayer(1, 0); acted = true; }
-    else if (e.code === 'Space') { skipTurn(); acted = true; }
-    
-    if (acted) e.preventDefault();
+$("end-hs-submit").addEventListener("click", submitScore);
+$("end-hs-initials").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") submitScore();
 });
-
-// Setup Initial View
-const sl = document.getElementById('start-leaderboard');
-if (sl) sl.innerHTML = generateLeaderboardHTML('tinydungeon');
+function showChoice() {
+  if (run.pendingPerks && !run.choice) perkOptions(run);
+  if (!run.choice) return;
+  const isPerk = run.choice.type === "perk";
+  $("choice-eyebrow").textContent = isPerk
+    ? "A NEW CHAPTER"
+    : "CHOOSE ONE RELIC";
+  $("choice-title").textContent = isPerk
+    ? "Shape your adventurer."
+    : "What will you carry?";
+  $("choice-note").textContent = isPerk
+    ? "Choose one upgrade. The dungeon waits while you decide."
+    : "One item goes into your pack. Equipping it later costs one turn.";
+  const list = $("choice-options");
+  list.replaceChildren();
+  run.choice.options.forEach((id, i) => {
+    const entry = (isPerk ? PERKS : ITEMS)[id];
+    const b = button(`${i + 1}. ${entry.name}`, () => {
+      if (choose(run, i)) {
+        $("choice-screen").close();
+        update();
+        if (!$("choice-screen").open)
+          $("gameCanvas").focus({ preventScroll: true });
+      }
+    });
+    const desc = document.createElement("small");
+    desc.textContent = entry.description;
+    b.append(desc);
+    list.append(b);
+  });
+  if (!$("choice-screen").open) $("choice-screen").showModal();
+}
+$("choice-screen").addEventListener("cancel", (e) => e.preventDefault());
+function update() {
+  if (!run) return;
+  for (const e of run.events) sound.play(e.type);
+  renderer.ingest(run);
+  if (run.status !== "playing") {
+    finish();
+    return;
+  }
+  if (run.floor > progress.depth || run.guardians > progress.guardians) {
+    if (updateProgress()) {
+      message(run, "A new perk is unlocked for future adventurers.", "good");
+    }
+  }
+  const p = run.player,
+    st = stats(run);
+  $("biome-name").textContent =
+    BIOMES[Math.min(3, Math.floor((run.floor - 1) / 3))].name;
+  $("floor-name").textContent =
+    `Floor ${String(run.floor).padStart(2, "0")} / 10`;
+  $("player-stats").textContent =
+    `${p.class} · Lv ${p.level}                 ${p.hp} / ${st.maxHp} HP`;
+  $("health-bar").max = st.maxHp;
+  $("health-bar").value = p.hp;
+  $("xp-stats").textContent =
+    `${p.xp} / ${p.nextXp} XP · ATK ${st.attack} · DEF ${st.defense}`;
+  $("turn-count").textContent = `Turn ${run.turn}`;
+  $("ability-btn").textContent =
+    `${{ Fighter: "Guard", Mage: "Bolt", Priest: "Ward", Rogue: "Step" }[p.class]} · ${["Mage", "Priest"].includes(p.class) ? p.charges + "/" + capacity(run) : p.cooldown ? p.cooldown + " turns" : "Q"}`;
+  $("ability-btn").title = CLASSES[p.class].help;
+  $("potion-btn").textContent =
+    `Potion ${p.inventory.filter((id) => ITEMS[id].heal).length} · H`;
+  const near = run.features.find((f) => !f.used && distance(f, p) <= 1),
+    stairs = distance(run.stairs, p) === 0;
+  $("interact-btn").textContent = stairs
+    ? "Descend · E"
+    : near
+      ? `${near.type} · E`
+      : "Interact · E";
+  const threats = run.enemies.filter(
+    (e) => e.intent && run.visible[e.y * 30 + e.x],
+  );
+  $("action-hint").textContent = aim
+    ? `${aim === "ability" ? CLASSES[p.class].ability : "Weapon attack"}: choose a direction. Esc cancels.`
+    : threats.length
+      ? "Marked tiles are struck next turn. Move to safety."
+      : stairs
+        ? "E to descend. Guardians must be defeated."
+        : near
+          ? `${near.type === "treasure" ? "Blood chest: costs 6 HP. " : ""}E to use ${near.type}.`
+          : p.empowered
+            ? "Your next attack is empowered."
+            : CLASSES[p.class].help;
+  const log = $("msg-log");
+  log.replaceChildren();
+  for (const m of run.messages) {
+    const row = document.createElement("p");
+    row.className = `msg-${m.tone}`;
+    row.textContent = m.text;
+    log.append(row);
+  }
+  const boss = run.enemies.find((e) => e.boss && run.visible[e.y * 30 + e.x]);
+  $("boss-bar").hidden = !boss;
+  if (boss) {
+    $("boss-bar").replaceChildren(
+      document.createTextNode(
+        `${boss.name} · Phase ${boss.phase} · ${boss.hp}/${boss.maxHp}`,
+      ),
+    );
+    const hp = document.createElement("progress");
+    hp.max = boss.maxHp;
+    hp.value = boss.hp;
+    hp.setAttribute("aria-label", `${boss.name} health`);
+    $("boss-bar").append(hp);
+  }
+  showChoice();
+  save();
+}
+function action(value) {
+  if (!run || $("inventory-screen").open || $("choice-screen").open) return;
+  sound.unlock();
+  act(run, value);
+  update();
+}
+function direction(dx, dy) {
+  const type = aim || "move";
+  aim = null;
+  action({ type, dx, dy });
+}
+function ability() {
+  if (!run) return;
+  if (["Mage", "Rogue"].includes(run.player.class)) {
+    aim = aim === "ability" ? null : "ability";
+    update();
+  } else action({ type: "ability" });
+}
+function inventory() {
+  if (!run || run.status !== "playing" || $("choice-screen").open) return;
+  if ($("inventory-screen").open) {
+    $("inventory-screen").close();
+    (lastFocus || $("gameCanvas")).focus({ preventScroll: true });
+    return;
+  }
+  aim = null;
+  lastFocus = document.activeElement;
+  const p = run.player,
+    st = stats(run);
+  $("equipment-list").replaceChildren();
+  for (const [slot, id] of Object.entries(p.equipment)) {
+    const el = document.createElement("div"),
+      label = document.createElement("small");
+    label.textContent = slot;
+    el.append(label, document.createTextNode(id ? ITEMS[id].name : "None"));
+    $("equipment-list").append(el);
+  }
+  $("inv-stats-panel").textContent =
+    `ATK ${st.attack} · DEF ${st.defense} · HP ${p.hp}/${st.maxHp} · Reach ${st.reach}\n${p.perks.length ? "Perks: " + perkSummary(p.perks) : "Choose perks at even levels."}`;
+  const list = $("backpack-list");
+  list.replaceChildren();
+  if (!p.inventory.length) list.textContent = "Your pack is empty.";
+  p.inventory.forEach((id, index) => {
+    const item = ITEMS[id],
+      row = document.createElement("div");
+    row.className = "item-row";
+    const use = button(`${item.heal ? "Drink" : "Equip"} ${item.name}`, () =>
+        inventoryAction({ type: "use", index }),
+      ),
+      desc = document.createElement("small");
+    const old = ITEMS[p.equipment[item.type]] || {},
+      comparison = item.heal
+        ? ""
+        : ["attack", "defense", "maxHp"]
+            .map((k) => {
+              const delta = (item[k] || 0) - (old[k] || 0);
+              return delta
+                ? `${delta > 0 ? "+" : ""}${delta} ${k === "maxHp" ? "max HP" : k}`
+                : "";
+            })
+            .filter(Boolean)
+            .join(" · ");
+    desc.textContent = `${item.description}${item.heal && p.class === "Priest" ? " Priest blessing: +4 HP." : ""}${comparison ? " Compared with equipped: " + comparison : ""}`;
+    use.append(desc);
+    row.append(
+      use,
+      button("Drop", () => inventoryAction({ type: "drop", index })),
+    );
+    list.append(row);
+  });
+  $("inventory-screen").showModal();
+}
+function inventoryAction(value) {
+  $("inventory-screen").close();
+  action(value);
+  if (!ended && !$("choice-screen").open)
+    $("gameCanvas").focus({ preventScroll: true });
+}
+window.toggleInventory = inventory;
+$("inventory-btn").addEventListener("click", inventory);
+$("close-inventory").addEventListener("click", inventory);
+$("ability-btn").addEventListener("click", ability);
+$("reach-btn").addEventListener("click", () => {
+  aim = aim === "reach" ? null : "reach";
+  update();
+});
+$("interact-btn").addEventListener("click", () => action({ type: "interact" }));
+$("potion-btn").addEventListener("click", () => action({ type: "potion" }));
+$("wait-btn").addEventListener("click", () => action({ type: "wait" }));
+for (const b of document.querySelectorAll("[data-dir]"))
+  b.addEventListener("click", () =>
+    direction(...b.dataset.dir.split(",").map(Number)),
+  );
+const directions = {
+  ArrowUp: [0, -1],
+  w: [0, -1],
+  ArrowDown: [0, 1],
+  s: [0, 1],
+  ArrowLeft: [-1, 0],
+  a: [-1, 0],
+  ArrowRight: [1, 0],
+  d: [1, 0],
+};
+document.addEventListener("keydown", (e) => {
+  if (
+    !run ||
+    run.status !== "playing" ||
+    e.target.matches("input") ||
+    e.ctrlKey ||
+    e.altKey ||
+    e.metaKey
+  )
+    return;
+  if ($("choice-screen").open) {
+    if (["1", "2", "3"].includes(e.key)) {
+      e.preventDefault();
+      $("choice-options").children[Number(e.key) - 1].click();
+    }
+    return;
+  }
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if ($("inventory-screen").open) {
+    if (k === "i") {
+      e.preventDefault();
+      inventory();
+    }
+    return;
+  }
+  if (e.repeat) return;
+  if (k === "Escape") {
+    aim = null;
+    update();
+    return;
+  }
+  if (directions[k]) {
+    e.preventDefault();
+    direction(...directions[k]);
+    return;
+  }
+  const commands = {
+    q: ability,
+    f: () => {
+      aim = aim === "reach" ? null : "reach";
+      update();
+    },
+    e: () => action({ type: "interact" }),
+    h: () => action({ type: "potion" }),
+    i: inventory,
+    " ": () => action({ type: "wait" }),
+  };
+  if (commands[k]) {
+    if (k === " " && e.target.tagName === "BUTTON") return;
+    e.preventDefault();
+    commands[k]();
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  sound.setActive(!document.hidden);
+  if (document.hidden) save();
+});
+window.addEventListener("pagehide", save);
+syncSound();
+refreshMenu();

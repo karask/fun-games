@@ -1,347 +1,304 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#111c20" />
     <title>Tiny Dungeon</title>
+    <link rel="icon" href="assets/stairs.png" />
     <script>
-        if (window.location.pathname.indexOf('.') === -1 && !window.location.pathname.endsWith('/')) {
-            const base = document.createElement('base');
-            base.href = window.location.pathname + '/';
-            document.head.appendChild(base);
-        }
+      if (
+        !location.pathname.includes(".") &&
+        !location.pathname.endsWith("/")
+      ) {
+        const base = document.createElement("base");
+        base.href = location.pathname + "/";
+        document.head.appendChild(base);
+      }
     </script>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            user-select: none;
-        }
-        
-        #game-container {
-            position: relative;
-            width: 800px;
-            height: 600px;
-        }
-
-        canvas {
-            background: #000;
-            box-shadow: 0 0 20px rgba(138, 43, 226, 0.2); /* Purple neon glow */
-            border: 2px solid #333;
-            border-radius: 8px;
-            display: block;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.85);
-            border-radius: 8px;
-            z-index: 20;
-        }
-        
-        .title {
-            color: #9c88ff;
-            font-size: 48px;
-            text-shadow: 0 0 20px rgba(156, 136, 255, 0.6);
-            margin-bottom: 20px;
-            margin-top: 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .menu {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 800;
-            background: #fbc531;
-            color: #000;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            min-width: 120px;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            background: #fff;
-            box-shadow: 0 5px 15px rgba(251, 197, 49, 0.4);
-        }
-        
-        button:active {
-            transform: translateY(1px);
-        }
-
-        .controls-info {
-            text-align: center;
-            color: #eccc68;
-            font-size: 14px;
-            line-height: 1.6;
-            background: rgba(0,0,0,0.5);
-            padding: 15px 25px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            max-width: 80%;
-        }
-
-        /* Classes styling */
-        .class-btn { background: #353b48; color: #fff; border: 2px solid transparent; }
-        .class-btn:hover { background: #2f3640; color: #fbc531; }
-        .class-btn.Fighter { border-color: #e84118; color: #e84118; }
-        .class-btn.Mage { border-color: #00a8ff; color: #00a8ff; }
-        .class-btn.Priest { border-color: #fbc531; color: #fbc531; }
-        .class-btn.Rogue { border-color: #4cd137; color: #4cd137; }
-        
-        .class-btn.Fighter:hover { background: #e84118; color: #fff; }
-        .class-btn.Mage:hover { background: #00a8ff; color: #fff; }
-        .class-btn.Priest:hover { background: #fbc531; color: #fff; }
-        .class-btn.Rogue:hover { background: #4cd137; color: #fff; }
-
-        #ui-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            bottom: 10px;
-            pointer-events: none;
-            display: none;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            font-size: 16px;
-            background: rgba(0,0,0,0.6);
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #333;
-            font-weight: 600;
-        }
-
-        .msg-log {
-            background: rgba(0,0,0,0.6);
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #333;
-            min-height: 60px;
-            max-height: 60px;
-            overflow: hidden;
-            font-size: 14px;
-            color: #dcdde1;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-        
-        .msg-log p { margin: 2px 0; }
-        .msg-good { color: #4cd137; }
-        .msg-bad { color: #e84118; }
-        .msg-info { color: #00a8ff; }
-
-        /* Inventory Screen */
-        #inventory-screen {
-            display: none;
-        }
-        
-        .inv-container {
-            width: 80%;
-            height: 80%;
-            background: #2f3640;
-            border: 2px solid #718093;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            color: #f5f6fa;
-        }
-        
-        .inv-header {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 2px solid #718093;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .inv-content {
-            display: flex;
-            flex: 1;
-            gap: 20px;
-        }
-
-        .inv-slots {
-            flex: 1;
-            background: #192a56;
-            padding: 10px;
-            border-radius: 6px;
-        }
-
-        .inv-items {
-            flex: 2;
-            background: #273c75;
-            padding: 10px;
-            border-radius: 6px;
-            overflow-y: auto;
-        }
-        
-        .item-row {
-            padding: 8px;
-            margin-bottom: 4px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-        }
-        .item-row:hover { background: rgba(0,0,0,0.6); color: #fbc531; }
-        .item-equipped { color: #4cd137; }
-        
-        .eq-slot {
-            margin-bottom: 15px;
-            padding: 10px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 4px;
-        }
-        .eq-slot span.label { color: #7f8fa6; font-size: 12px; display: block; margin-bottom: 4px; }
-    </style>
-</head>
-<body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-        
-        <!-- UI overlay shown during playing -->
-        <div id="ui-overlay">
-            <div class="top-bar">
-                <span id="player-stats">HP: 100/100 | Lvl: 1 | XP: 0/10 | Floor: 1</span>
-                <span>[WASD] Move | [I] Inventory | [Space] Wait</span>
-            </div>
-            <div class="msg-log" id="msg-log">
-                <!-- Messages go here -->
-            </div>
+    <link rel="stylesheet" href="splash.css" />
+    <link rel="stylesheet" href="dungeon.css" />
+  </head>
+  <body>
+    <main id="game-container">
+      <section id="adventure" hidden aria-label="Dungeon adventure">
+        <header class="game-hud">
+          <div>
+            <span class="eyebrow" id="biome-name"></span>
+            <h2 id="floor-name"></h2>
+          </div>
+          <div class="vitals">
+            <div id="player-stats"></div>
+            <progress
+              id="health-bar"
+              aria-label="Health"
+              max="100"
+              value="100"
+            ></progress
+            ><small id="xp-stats"></small>
+          </div>
+          <div class="hud-tools">
+            <button id="sound-toggle" aria-pressed="true">Sound on</button
+            ><button id="suspend-run">Save & menu</button>
+          </div>
+        </header>
+        <div class="dungeon-frame">
+          <canvas
+            id="gameCanvas"
+            width="960"
+            height="640"
+            tabindex="0"
+            aria-label="Dungeon map. Arrow keys or WASD move and attack; Q ability, F aimed attack, E interact, H potion, I inventory, Space wait."
+          ></canvas>
+          <div id="boss-bar" hidden></div>
         </div>
-
-        <!-- Start/Death Screen -->
-        <div id="start-screen" class="overlay">
-            <h1 class="title">Tiny Dungeon</h1>
-            
-            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
-            
-            <h2 id="death-msg" style="display:none; color: #e84118;">You have died!</h2>
-            <div id="end-score-display" style="display:none; color: #fbc531; font-size: 18px; margin-bottom: 10px;">End Score: <span id="final-score-val">0</span></div>
-            
-            <div id="end-leaderboard" style="display:none; margin-bottom: 20px; width: 300px;"></div>
-            
-            <div id="end-hs-input" style="display:none; flex-direction: column; align-items: center; margin-bottom: 20px;">
-                <h3 style="color:#00d2d3; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);">NEW HIGH SCORE!</h3>
-                <p style="margin-bottom: 15px; font-weight: bold; color: #fff;">PLEASE ENTER YOUR INITIALS:</p>
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <input type="text" id="end-hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none;">
-                    <button class="class-btn" id="end-hs-submit">SUBMIT</button>
-                </div>
+        <div class="turn-strip">
+          <span id="action-hint">Choose your next move.</span
+          ><span id="turn-count"></span>
+        </div>
+        <footer class="game-footer">
+          <div
+            id="msg-log"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+          ></div>
+          <div class="action-panel">
+            <div class="action-buttons">
+              <button id="ability-btn">Ability · Q</button
+              ><button id="interact-btn">Interact · E</button
+              ><button id="potion-btn">Potion · H</button
+              ><button id="inventory-btn">Pack · I</button
+              ><button id="reach-btn">Aim · F</button
+              ><button id="wait-btn">Wait · Space</button>
+            </div>
+            <div class="touch-pad" aria-label="Movement">
+              <button data-dir="0,-1" aria-label="Move up">↑</button
+              ><button data-dir="-1,0" aria-label="Move left">←</button
+              ><button data-dir="0,1" aria-label="Move down">↓</button
+              ><button data-dir="1,0" aria-label="Move right">→</button>
+            </div>
+          </div>
+        </footer>
+      </section>
+      <div id="start-screen" class="overlay" aria-label="Tiny Dungeon menu">
+        <div class="splash-hero">
+          <img
+            src="../../assets/tinydungeon_thumb.png"
+            alt=""
+            aria-hidden="true"
+            width="640"
+            height="640"
+          />
+          <div class="hero-copy">
+            <p class="splash-eyebrow">A TURN-BASED DUNGEON CRAWLER</p>
+            <h1 class="title">Tiny<br /><span>Dungeon.</span></h1>
+            <p>Ten floors. One dangerous descent.</p>
+          </div>
+        </div>
+        <div class="splash-body">
+          <div class="splash-primary">
+            <h2 id="death-msg" style="display: none; color: #e84118">
+              You have died!
+            </h2>
+            <div
+              id="end-score-display"
+              style="
+                display: none;
+                color: #fbc531;
+                font-size: 18px;
+                margin-bottom: 10px;
+              "
+            >
+              End Score: <span id="final-score-val">0</span>
             </div>
 
-            <div id="end-button-container" style="display:none; margin-bottom: 20px;">
-                <button class="class-btn" onclick="window.backToMenu()">MAIN MENU</button>
+            <div
+              id="end-leaderboard"
+              style="display: none; margin-bottom: 20px; width: 300px"
+            ></div>
+
+            <div
+              id="end-hs-input"
+              style="
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h3
+                style="
+                  color: #00d2d3;
+                  margin-bottom: 10px;
+                  text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);
+                "
+              >
+                NEW HIGH SCORE!
+              </h3>
+              <p style="margin-bottom: 15px; font-weight: bold; color: #fff">
+                PLEASE ENTER YOUR INITIALS:
+              </p>
+              <div style="display: flex; gap: 10px; margin-bottom: 20px">
+                <input
+                  type="text"
+                  id="end-hs-initials"
+                  maxlength="3"
+                  autocomplete="off"
+                  style="
+                    font-size: 24px;
+                    text-align: center;
+                    width: 80px;
+                    text-transform: uppercase;
+                    background: #000;
+                    color: #00d2d3;
+                    border: 2px solid #00d2d3;
+                    border-radius: 4px;
+                    padding: 5px;
+                    outline: none;
+                  "
+                />
+                <button class="class-btn" id="end-hs-submit">SUBMIT</button>
+              </div>
             </div>
-            
+
+            <p id="run-recap" hidden></p>
+            <div
+              id="end-button-container"
+              style="display: none; margin-bottom: 20px"
+            >
+              <button class="class-btn" onclick="window.backToMenu()">
+                MAIN MENU
+              </button>
+            </div>
+
             <div id="class-select">
-                <h3 style="text-align:center; color:#dcdde1;">Select Your Class</h3>
-                <div class="menu">
-                    <button class="class-btn Fighter" onclick="window.startGame('Fighter')">Fighter</button>
-                    <button class="class-btn Mage" onclick="window.startGame('Mage')">Mage</button>
-                    <button class="class-btn Priest" onclick="window.startGame('Priest')">Priest</button>
-                    <button class="class-btn Rogue" onclick="window.startGame('Rogue')">Rogue</button>
-                </div>
+              <div class="resume-row">
+                <button id="resume-run" hidden>Continue run</button
+                ><span id="save-status"></span>
+              </div>
+              <h2 class="splash-eyebrow">CHOOSE YOUR ADVENTURER</h2>
+              <div class="run-options">
+                <label for="run-seed"
+                  >RUN SEED
+                  <input
+                    id="run-seed"
+                    maxlength="40"
+                    placeholder="Random adventure"
+                    autocomplete="off" /></label
+                ><button id="daily-seed" type="button">Daily seed</button>
+              </div>
+              <div class="menu">
+                <button
+                  class="class-btn Fighter"
+                  onclick="window.startGame('Fighter')"
+                >
+                  <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <path
+                      d="M26 5 15 22l5 3L31 8Z M10 20l14 9 M15 26l-6 9 M6 33l6 4"
+                    /></svg
+                  ><span>Fighter<small>36 HP · Guard & cleave</small></span
+                  ><b aria-hidden="true">→</b>
+                </button>
+                <button
+                  class="class-btn Mage"
+                  onclick="window.startGame('Mage')"
+                >
+                  <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <circle cx="25" cy="11" r="6" />
+                    <path
+                      d="m21 17-12 18 M12 4v6 M9 7h6 M33 23v6 M30 26h6"
+                    /></svg
+                  ><span>Mage<small>26 HP · Ranged arc bolt</small></span
+                  ><b aria-hidden="true">→</b>
+                </button>
+                <button
+                  class="class-btn Priest"
+                  onclick="window.startGame('Priest')"
+                >
+                  <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <path
+                      d="M15 5h10v10l6 10c5 10-27 10-22 0l6-10Z M15 10h10 M16 25h8 M20 21v8"
+                    /></svg
+                  ><span>Priest<small>32 HP · Healing ward</small></span
+                  ><b aria-hidden="true">→</b>
+                </button>
+                <button
+                  class="class-btn Rogue"
+                  onclick="window.startGame('Rogue')"
+                >
+                  <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <path
+                      d="M30 5c1 12-6 18-13 19l-3-3Z M10 19l12 12 M14 27l-6 9 M6 33l5 4"
+                    /></svg
+                  ><span>Rogue<small>28 HP · Step & evade</small></span
+                  ><b aria-hidden="true">→</b>
+                </button>
+              </div>
+              <p class="kit-tip">
+                Weapon equipped. A potion packed. Your story begins.<br /><kbd
+                  >Q</kbd
+                >
+                Class ability · <kbd>H</kbd> Quick potion ·
+                <kbd>E</kbd> Interact
+              </p>
             </div>
-
             <div class="controls-info">
-                <p>Welcome to Tiny Dungeon!</p>
-                <p><strong>Move & Attack:</strong> Arrows or WASD</p>
-                <p><strong>Skip Turn:</strong> Spacebar | <strong>Inventory:</strong> I</p>
-                <p style="margin-top: 10px; color: #9c88ff;">
-                    Kill monsters, descend 10 floors, and defeat the final boss!<br>
-                    Watch out for mini-bosses on floors 4 and 8.
-                </p>
+              <p>
+                <span>MOVE / ATTACK</span> <kbd>WASD</kbd> or <kbd>Arrows</kbd>
+              </p>
+              <p>
+                <span>WAIT</span> <kbd>Space</kbd>
+                <span class="inventory-label">INVENTORY</span> <kbd>I</kbd>
+              </p>
+              <p class="turn-tip">
+                The dungeon moves when you do. Take your time.
+              </p>
             </div>
-        </div>
-
-        <!-- Inventory Overlay -->
-        <div id="inventory-screen" class="overlay">
-            <div class="inv-container">
-                <div class="inv-header">
-                    <h2 style="margin:0;">Inventory</h2>
-                    <span style="color:#7f8fa6; cursor:pointer;" onclick="window.toggleInventory()">[Close (I)]</span>
-                </div>
-                <div class="inv-content">
-                    <div class="inv-slots">
-                        <h3 style="margin-top:0;">Equipment</h3>
-                        <div class="eq-slot">
-                            <span class="label">WEAPON</span>
-                            <div id="eq-weapon">None</div>
-                        </div>
-                        <div class="eq-slot">
-                            <span class="label">ARMOR</span>
-                            <div id="eq-armor">None</div>
-                        </div>
-                        <div class="eq-slot">
-                            <span class="label">ACCESSORY</span>
-                            <div id="eq-accessory">None</div>
-                        </div>
-                        <div style="margin-top:20px; font-size: 14px; color: #dcdde1;" id="inv-stats-panel">
-                            <!-- Stats here -->
-                        </div>
-                    </div>
-                    <div class="inv-items">
-                        <h3 style="margin-top:0;">Backpack</h3>
-                        <div id="backpack-list">
-                            <!-- Items go here -->
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top:15px; text-align:center; color:#fbc531; font-size:12px;">
-                    Click an item in backpack to Equip/Use.
-                </div>
+          </div>
+          <aside class="splash-records" aria-labelledby="records-title">
+            <h2 class="splash-eyebrow" id="records-title">DUNGEON RECORDS</h2>
+            <p>Best runs, ranked by XP earned.</p>
+            <div id="start-leaderboard"></div>
+            <p id="unlock-status" class="unlock-note"></p>
+            <div class="descent-note">
+              <span>THE DESCENT</span>
+              <p>
+                Explore ten changing floors, face the guardians on floors 4 and
+                8, and defeat the final boss.
+              </p>
+              <small>Single player · Keyboard & touch</small>
             </div>
+          </aside>
         </div>
-        
-    </div>
+      </div>
 
-    <!-- Force fresh JS -->
-    <script type="module">
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = 'game.js?v=' + new Date().getTime();
-        document.body.appendChild(script);
-    </script>
-</body>
+      <dialog id="inventory-screen" aria-labelledby="inventory-title">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">YOUR EQUIPMENT</p>
+            <h2 id="inventory-title">Adventurer’s pack</h2>
+          </div>
+          <button id="close-inventory">Close · I</button>
+        </div>
+        <p class="dialog-note">
+          Opening the pack is free. Equipping, using or dropping an item spends
+          one turn and closes the pack.
+        </p>
+        <div id="equipment-list"></div>
+        <p id="inv-stats-panel"></p>
+        <div id="backpack-list"></div>
+      </dialog>
+      <dialog id="choice-screen" aria-labelledby="choice-title">
+        <p class="eyebrow" id="choice-eyebrow"></p>
+        <h2 id="choice-title"></h2>
+        <p id="choice-note"></p>
+        <div id="choice-options"></div>
+      </dialog>
+    </main>
+    <script type="module" src="game.js"></script>
+  </body>
 </html>

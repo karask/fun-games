@@ -1,0 +1,590 @@
+{
+  "Fighter": {
+    "wins": 20,
+    "stalled": 0,
+    "meanFloor": 10,
+    "results": [
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 99,
+        "turns": 947,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 95,
+        "turns": 972,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 100,
+        "turns": 908,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 75,
+        "turns": 891,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 85,
+        "turns": 937,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 61,
+        "turns": 873,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 92,
+        "turns": 889,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 93,
+        "turns": 870,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 92,
+        "turns": 910,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 881,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 108,
+        "turns": 889,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 98,
+        "turns": 873,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 119,
+        "turns": 913,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 895,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 107,
+        "turns": 896,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 961,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 98,
+        "turns": 950,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 118,
+        "turns": 982,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 120,
+        "turns": 883,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 71,
+        "turns": 875,
+        "cause": "Defeated Demon King"
+      }
+    ]
+  },
+  "Mage": {
+    "wins": 18,
+    "stalled": 2,
+    "meanFloor": 9.7,
+    "results": [
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 95,
+        "turns": 899,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 62,
+        "turns": 878,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 96,
+        "turns": 1100,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 80,
+        "turns": 861,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 80,
+        "turns": 980,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 110,
+        "turns": 936,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 61,
+        "turns": 922,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 102,
+        "turns": 998,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 64,
+        "turns": 897,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 98,
+        "turns": 964,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "playing",
+        "floor": 10,
+        "hp": 100,
+        "turns": 4985,
+        "cause": ""
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 79,
+        "turns": 835,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 90,
+        "turns": 924,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 114,
+        "turns": 982,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "playing",
+        "floor": 4,
+        "hp": 66,
+        "turns": 4993,
+        "cause": ""
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 106,
+        "turns": 927,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 106,
+        "turns": 939,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 72,
+        "turns": 887,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 86,
+        "turns": 836,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 74,
+        "turns": 941,
+        "cause": "Defeated Ancient Dragon"
+      }
+    ]
+  },
+  "Priest": {
+    "wins": 20,
+    "stalled": 0,
+    "meanFloor": 10,
+    "results": [
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 106,
+        "turns": 951,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 118,
+        "turns": 956,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 116,
+        "turns": 905,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 88,
+        "turns": 901,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 88,
+        "turns": 912,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 98,
+        "turns": 881,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 116,
+        "turns": 910,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 116,
+        "turns": 873,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 949,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 930,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 94,
+        "turns": 959,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 900,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 124,
+        "turns": 875,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 100,
+        "turns": 898,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 133,
+        "turns": 944,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 110,
+        "turns": 994,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 113,
+        "turns": 967,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 80,
+        "turns": 1031,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 108,
+        "turns": 890,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 94,
+        "turns": 893,
+        "cause": "Defeated Ancient Dragon"
+      }
+    ]
+  },
+  "Rogue": {
+    "wins": 20,
+    "stalled": 0,
+    "meanFloor": 10,
+    "results": [
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 92,
+        "turns": 937,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 68,
+        "turns": 900,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 80,
+        "turns": 879,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 86,
+        "turns": 902,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 70,
+        "turns": 903,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 120,
+        "turns": 857,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 90,
+        "turns": 915,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 88,
+        "turns": 844,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 71,
+        "turns": 978,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 94,
+        "turns": 930,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 92,
+        "turns": 872,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 78,
+        "turns": 937,
+        "cause": "Defeated Demon King"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 100,
+        "turns": 950,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 95,
+        "turns": 855,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 70,
+        "turns": 949,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 112,
+        "turns": 886,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 88,
+        "turns": 885,
+        "cause": "Defeated Archlich"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 78,
+        "turns": 903,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 84,
+        "turns": 867,
+        "cause": "Defeated Ancient Dragon"
+      },
+      {
+        "status": "won",
+        "floor": 10,
+        "hp": 86,
+        "turns": 876,
+        "cause": "Defeated Demon King"
+      }
+    ]
+  }
+}

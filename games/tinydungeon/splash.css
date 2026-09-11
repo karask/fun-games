@@ -1,0 +1,70 @@
+/* Only the shared title/results screen changes; in-game layout remains separate. */
+body:has(#start-screen:not([style*="display: none"])) { height: auto; min-height: 100vh; min-height: 100dvh; overflow: auto; background: #0b1213; }
+#game-container:has(#start-screen:not([style*="display: none"])) { width: min(900px, calc(100vw - 32px)); height: 660px; margin-block: 16px; }
+#game-container:has(#start-screen:not([style*="display: none"])) canvas { visibility: hidden; width: 100%; height: 100%; box-sizing: border-box; }
+#start-screen { justify-content: flex-start; align-items: stretch; background: #172321; color: #f1f1df; border: 1px solid #485748; border-radius: 12px; overflow: auto; font-family: system-ui, sans-serif; box-shadow: 0 24px 70px #0006; }
+#start-screen * { box-sizing: border-box; }
+.splash-hero { position: relative; flex: 0 0 230px; overflow: hidden; border-bottom: 1px solid #485748; background: #0e1817; }
+.splash-hero > img { position: absolute; right: 0; top: 0; width: 56%; height: 100%; object-fit: cover; object-position: center 57%; }
+.splash-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0e1817 32%, #0e1817e6 45%, #0e181700 75%); pointer-events: none; }
+.hero-copy { position: relative; z-index: 1; padding: 28px 32px; }
+.splash-eyebrow { margin: 0; font-size: 9px; font-weight: 750; letter-spacing: 1.5px; color: #d2c28e; }
+#start-screen .title { margin: 12px 0; font: 700 50px/.95 Georgia, serif; letter-spacing: -1.5px; text-transform: none; color: #f5efda; text-shadow: none; }
+#start-screen .title span { color: #eac77c; }
+.hero-copy > p:last-child { color: #b8c4b6; font-size: 13px; margin: 14px 0 0; }
+.splash-body { display: grid; grid-template-columns: 1.8fr 1fr; gap: 28px; padding: 28px 32px; }
+.splash-primary { min-width: 0; }
+#start-screen .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 12px; }
+#start-screen .class-btn { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 76px; width: 100%; padding: 12px; border: 1px solid #52614e; background: #21322b; color: #f0edda; font: 700 14px system-ui, sans-serif; text-transform: none; border-radius: 6px; box-shadow: none; transition: background .18s, border-color .18s; }
+#start-screen .class-btn:hover { background: #304334; border-color: #d7c492; color: #fff6dd; transform: none; }
+#start-screen .class-btn:focus-visible { outline: 3px solid #f6d38e; outline-offset: 3px; }
+#start-screen .class-btn svg { flex: 0 0 32px; width: 32px; height: 38px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+#start-screen .class-btn.Fighter svg { color: #e9aa87; }
+#start-screen .class-btn.Mage svg { color: #9bc9e8; }
+#start-screen .class-btn.Priest svg { color: #eac77c; }
+#start-screen .class-btn.Rogue svg { color: #b4d89a; }
+#start-screen .class-btn > span { text-align: left; }
+#start-screen .class-btn small { display: block; margin-top: 5px; font-size: 10px; font-weight: 400; color: #b7c6b6; white-space: nowrap; }
+#start-screen .class-btn b { margin-left: auto; color: #b9c2a5; font-size: 14px; font-weight: 400; }
+.kit-tip { margin: 10px 0 20px; color: #becab7; font-size: 11px; line-height: 1.6; }
+#start-screen kbd { display: inline-block; padding: 2px 5px; border: 1px solid #53624d; border-bottom-width: 2px; border-radius: 3px; font: 10px system-ui, sans-serif; color: #eee9cf; }
+#start-screen .controls-info { max-width: 100%; background: none; border: 0; border-top: 1px solid #3a4c3f; border-radius: 0; padding: 12px 0 0; text-align: left; color: #c1cebc; font-size: 11px; }
+.controls-info p { margin: 6px 0; }
+.controls-info p > span { font-size: 9px; color: #a6b79e; letter-spacing: .8px; margin-right: 8px; }
+.controls-info .inventory-label { margin-left: 16px; }
+#start-screen .turn-tip { font-size: 11px; color: #a6b79e; margin-top: 12px; }
+.splash-records { min-width: 0; border-left: 1px solid #3a4c3f; padding-left: 28px; }
+.splash-records > p { font-size: 11px; color: #a6b79e; margin: 10px 0 18px; }
+#start-leaderboard { width: 100%; }
+#start-leaderboard > div { font-size: 11px !important; color: #aebca9 !important; text-align: left !important; padding: 16px 0; }
+#start-leaderboard table { font-size: 13px !important; }
+#start-leaderboard th { font-size: 10px; }
+.descent-note { margin-top: 24px; border-top: 1px solid #3a4c3f; padding-top: 18px; }
+.descent-note > span { color: #d2c28e; font-size: 9px; letter-spacing: 1.5px; font-weight: 750; }
+.descent-note p { color: #aebbab; font-size: 12px; line-height: 1.7; margin: 10px 0 16px; }
+.descent-note small { color: #94a88f; font-size: 10px; }
+/* Preserve the existing death/victory flow, which reuses this overlay. */
+#start-screen:has(#class-select[style*="display: none"]) .splash-body { grid-template-columns: 1fr; }
+#start-screen:has(#class-select[style*="display: none"]) .splash-primary { display: flex; flex-direction: column; align-items: center; text-align: center; }
+#start-screen:has(#class-select[style*="display: none"]) .controls-info,
+#start-screen:has(#class-select[style*="display: none"]) .splash-records { display: none; }
+#start-screen #death-msg { margin: 0 0 16px; font-size: 26px; }
+#start-screen [id$="leaderboard"] { max-width: 100%; }
+@media (max-width: 700px) {
+    #game-container:has(#start-screen:not([style*="display: none"])) { height: auto; width: calc(100vw - 16px); margin-block: 8px; }
+    #start-screen { position: relative; inset: auto; overflow: hidden; }
+    #game-container:has(#start-screen:not([style*="display: none"])) canvas { display: none; }
+    .splash-hero { flex-basis: 250px; }.hero-copy { padding: 24px; }
+    .splash-hero > img { width: 100%; opacity: .5; }.splash-hero::after { background: linear-gradient(90deg,#0e1817f0,#0e181755); }
+    .splash-body { grid-template-columns: 1fr; gap: 24px; padding: 24px; }
+    #start-screen .menu { gap: 8px; }#start-screen .class-btn { padding: 12px 10px; gap: 8px; }
+    #start-screen .class-btn svg { flex-basis: 24px; width: 24px; }
+    #start-screen .class-btn b { display: none; }
+    .splash-records { border-left: 0; border-top: 1px solid #3a4c3f; padding: 20px 0 0; }
+    .descent-note { margin-top: 16px; }
+}
+@media (max-width: 390px) {
+    #start-screen .class-btn svg { display: none; }
+    #start-screen .class-btn small { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) { #start-screen .class-btn { transition: none; } }
