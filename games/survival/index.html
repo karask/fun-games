@@ -11,117 +11,57 @@
             document.head.appendChild(base);
         }
     </script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-        }
-        
-        #game-container {
-            position: relative;
-        }
-
-        canvas {
-            background: #000;
-            box-shadow: 0 0 20px rgba(0, 210, 211, 0.2);
-            border: 2px solid #333;
-            border-radius: 8px;
-            cursor: crosshair;
-        }
-
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-        }
-        
-        .stat {
-            font-size: 24px;
-            font-weight: 800;
-            color: #00d2d3;
-            text-shadow: 0 0 10px rgba(0, 210, 211, 0.5);
-        }
-
-        .health {
-            color: #ff9ff3;
-            text-shadow: 0 0 10px rgba(255, 159, 243, 0.5);
-        }
-
-        #game-over {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            border-radius: 8px;
-        }
-
-        #game-over h2 {
-            color: #ff4757;
-            font-size: 32px;
-            margin-bottom: 10px;
-            text-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
-        }
-        
-        #final-score {
-            font-size: 20px;
-            margin-bottom: 20px;
-            color: #00d2d3;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            background: #00d2d3;
-            color: #000;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: #fff;
-            box-shadow: 0 0 15px #00d2d3;
-        }
-    </style>
+    <link rel="stylesheet" href="menu.css">
+    <link rel="stylesheet" href="game.css">
 </head>
 <body>
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600" tabindex="0"></canvas>
+        <canvas id="gameCanvas" width="800" height="600" tabindex="0" aria-label="Neon Survival arena. WASD or arrows move, hold Space to fire, Shift dashes, P pauses."></canvas>
         <div id="ui">
-            <div class="stat">SCORE <span id="score-val">0</span> <span style="font-size: 14px; color:#ccc; margin-left: 10px;">(LVL <span id="level-val">1</span>)</span></div>
-            <div class="stat health">HP <span id="health-val">100</span></div>
+            <div class="hud-score"><span class="hud-label">SCORE</span><strong id="score-val">0</strong></div>
+            <div class="hud-level"><span class="hud-label">LEVEL <span id="level-val">1</span></span><progress id="level-meter" max="200" value="0" aria-label="Progress to next level"></progress><span id="time-val">0:00</span></div>
+            <div class="hud-health"><span class="hud-label">HULL <span id="health-val">100</span></span><progress id="health-meter" max="100" value="100" aria-label="Hull health"></progress></div>
+            <button id="pause-btn" aria-label="Pause or resume game">Pause</button>
         </div>
+        <div id="combat-status"><span><span id="dash-status">DASH READY</span><progress id="dash-meter" max="2" value="2" aria-label="Dash recharge"></progress></span><span id="powerup-status"></span><span class="combat-help">SHIFT dash · P pause</span></div>
         
-        <div id="start-screen" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.85); z-index: 10;">
-            <h1 style="color: #00d2d3; font-size: 48px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0,210,211,0.6); margin-top: 0;">NEON SURVIVAL</h1>
-            <div id="start-leaderboard" style="margin-bottom: 20px; width: 300px;"></div>
-            <p style="color: #ccc; margin-bottom: 20px; font-size: 14px;">WASD / Arrows to Move | Space to shoot (Auto-targets!)</p>
-            <button onclick="window.startGame()">START GAME</button>
-        </div>
+        <section id="start-screen" aria-labelledby="menu-title">
+            <div class="menu-hero">
+                <img class="arena-art" src="arena.svg" alt="" aria-hidden="true" width="800" height="320">
+                <div class="hero-copy">
+                    <p class="eyebrow">ONE ORB. NO WAY OUT.</p>
+                    <h1 id="menu-title">NEON<br><span>SURVIVAL</span></h1>
+                    <p class="hero-description">Keep moving. Hold your ground.<br>Make every second count.</p>
+                </div>
+                <span class="arena-caption">ENDLESS ARCADE SURVIVAL</span>
+            </div>
+            <div class="menu-content">
+                <div class="launch-panel">
+                    <button class="start-button" onclick="window.startGame()">Enter the arena <span aria-hidden="true">→</span></button>
+                    <p class="start-hint">or press Space to begin</p>
+                    <dl class="control-guide">
+                        <div><dt>MOVE</dt><dd><kbd>WASD</kbd><span> / </span><kbd>Arrows</kbd></dd></div>
+                        <div><dt>FIRE</dt><dd>Hold <kbd>Space</kbd><span> · auto-targets</span></dd></div>
+                        <div><dt>DODGE</dt><dd><kbd>Shift</kbd><span> · recharges in 2s</span></dd></div>
+                    </dl>
+                    <p class="survival-tip">Collect power-ups. Stay clear of the swarm.</p>
+                    <p class="keyboard-note">Keyboard required · Single player</p>
+                </div>
+                <section class="records-panel" aria-labelledby="records-title">
+                    <h2 id="records-title" class="eyebrow">PERSONAL BESTS</h2>
+                    <p class="records-caption">Your top five runs. Your next target.</p>
+                    <div id="start-leaderboard"></div>
+                </section>
+            </div>
+        </section>
+        <section id="pause-screen" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
+            <p class="eyebrow">ARENA ON HOLD</p><h2 id="pause-title">Take a breather.</h2>
+            <p>Your run is paused. Ready when you are.</p>
+            <button id="resume-btn">Resume run</button><button id="pause-menu-btn">Main menu</button>
+        </section>
         
-        <div id="game-over">
-            <h2>GAME OVER</h2>
+        <div id="game-over" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+            <h2 id="game-over-title">Run complete.</h2>
             <div id="final-score">Score: 0</div>
             
             <div id="game-over-leaderboard" style="margin-bottom: 20px; width: 300px; display: none;"></div>
@@ -133,9 +73,11 @@
                     <input type="text" id="hs-initials" maxlength="3" autocomplete="off" style="font-size: 24px; text-align: center; width: 80px; text-transform: uppercase; background: #000; color: #00d2d3; border: 2px solid #00d2d3; border-radius: 4px; padding: 5px; outline: none;">
                     <button id="hs-submit-btn">SUBMIT</button>
                 </div>
+                <button id="skip-score-btn">Skip saving</button>
             </div>
 
-            <button id="main-menu-btn" onclick="window.showMenu()">MAIN MENU</button>
+            <button id="retry-btn">Play again</button>
+            <button id="main-menu-btn" onclick="window.showMenu()">Main menu</button>
         </div>
     </div>
 

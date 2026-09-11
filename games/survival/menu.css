@@ -1,0 +1,57 @@
+/* The title screen shares the game's cyan player / pink enemy palette. */
+#start-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background: #0c1520;
+    color: #edf6fa;
+    border: 1px solid #304650;
+    border-radius: 8px;
+    overflow: auto;
+    font-family: system-ui, sans-serif;
+}
+#start-screen * { box-sizing: border-box; }
+.menu-hero { position: relative; flex: 0 0 290px; overflow: hidden; border-bottom: 1px solid #304650; }
+.arena-art { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+.hero-copy { position: relative; padding: 32px; }
+.eyebrow { margin: 0; color: #8ededa; font-size: 10px; font-weight: 750; letter-spacing: 2px; }
+#menu-title { font-size: clamp(40px, 6vw, 60px); font-weight: 900; letter-spacing: -2px; line-height: .98; margin: 20px 0 16px; }
+#menu-title span { color: #65ede5; }
+.hero-description { color: #b8c9d5; font-size: 14px; line-height: 1.6; margin: 0; }
+.arena-caption { position: absolute; bottom: 18px; right: 24px; font: 9px system-ui, sans-serif; letter-spacing: 2px; color: #90b5c5; }
+.menu-content { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; padding: 28px 32px; }
+.start-button { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 48px; padding: 14px 20px; background: #65ede5; color: #092421; border-radius: 6px; font: 750 15px system-ui, sans-serif; transition: background .2s; }
+.start-button:hover { background: #b6fff8; box-shadow: none; }
+.start-button:focus-visible { outline: 3px solid #ffe090; outline-offset: 4px; }
+.start-hint { font-size: 11px; color: #91a6b5; text-align: center; margin: 10px 0 20px; }
+.control-guide { margin: 0; display: grid; gap: 12px; }
+.control-guide > div { display: flex; align-items: center; gap: 16px; }
+.control-guide dt { width: 36px; font-size: 9px; font-weight: 750; letter-spacing: 1px; color: #91a6b5; }
+.control-guide dd { margin: 0; color: #d2dee5; font-size: 12px; }
+.control-guide dd span { color: #91a6b5; }
+kbd { display: inline-block; padding: 3px 6px; border: 1px solid #415765; border-bottom-width: 2px; border-radius: 4px; font: 11px system-ui, sans-serif; color: #e3edf2; background: #162631; }
+.survival-tip { margin: 18px 0 8px; color: #bdcdd6; font-size: 12px; }
+.keyboard-note { margin: 0; color: #91a6b5; font-size: 10px; }
+.records-panel { padding-left: 28px; border-left: 1px solid #304650; }
+.records-caption { color: #91a6b5; font-size: 12px; margin: 10px 0 18px; }
+#start-leaderboard { width: 100%; }
+#start-leaderboard > div { padding: 28px 12px; border: 1px dashed #304650; border-radius: 6px; font-size: 11px !important; color: #a9bdca !important; }
+#start-leaderboard table { font-size: 13px !important; font-variant-numeric: tabular-nums; }
+#start-leaderboard th { font-size: 10px; }
+body:has(#start-screen:not([style*="display: none"])) { height: auto; min-height: 100vh; min-height: 100dvh; overflow: auto; }
+#game-container:has(#start-screen:not([style*="display: none"])) { width: min(804px, 100%); min-height: 604px; }
+#game-container:has(#start-screen:not([style*="display: none"])) canvas { visibility: hidden; display: block; width: 100%; height: auto; box-sizing: border-box; }
+@media (max-width: 600px) {
+    #game-container:has(#start-screen:not([style*="display: none"])) { min-height: 850px; }
+    .menu-hero { flex-basis: 320px; }
+    .hero-copy { padding: 28px 24px; }
+    .arena-art { object-position: 65% center; opacity: .45; }
+    #menu-title { font-size: 44px; }
+    .arena-caption { right: auto; left: 24px; }
+    .menu-content { grid-template-columns: 1fr; padding: 24px; gap: 24px; }
+    .records-panel { padding: 20px 0 0; border-left: 0; border-top: 1px solid #304650; }
+    #start-screen { border-radius: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .start-button { transition: none; } }

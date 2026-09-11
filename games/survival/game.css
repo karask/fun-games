@@ -1,0 +1,42 @@
+button { border: 0; border-radius: 4px; cursor: pointer; font: 700 14px system-ui, sans-serif; }
+body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; color: #edf6fa; background: #080e16; font-family: system-ui, sans-serif; min-height: 100dvh; height: auto; overflow: auto; }
+#game-container { position: relative; width: min(804px, 100vw, calc(100dvh * 4 / 3)); }
+#gameCanvas { background: #070e19; border-radius: 8px; display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; box-sizing: border-box; border: 1px solid #304650; box-shadow: 0 16px 80px #0005; }
+#gameCanvas:focus-visible { outline: 2px solid #65ede5; outline-offset: 2px; }
+#ui { position: absolute; display: flex; justify-content: space-between; pointer-events: none; top: 0; left: 0; right: 0; padding: 16px 20px 20px; align-items: flex-start; gap: 20px; background: linear-gradient(#080e19e8, #080e1900); }
+.hud-label { display: block; font-size: 9px; font-weight: 750; letter-spacing: 1.5px; color: #a9c4d0; margin-bottom: 6px; }
+.hud-score strong { font-size: 26px; color: #b5fff2; font-variant-numeric: tabular-nums; }
+.hud-score { min-width: 72px; }
+.hud-level { margin-right: auto; }
+#time-val { display: block; font-size: 10px; margin-top: 5px; color: #a9c4d0; font-variant-numeric: tabular-nums; }
+progress { display: block; width: 100px; height: 4px; border: 0; border-radius: 2px; overflow: hidden; background: #2a3e4b; accent-color: #65ede5; }
+progress::-webkit-progress-bar { background: #2a3e4b; }
+progress::-webkit-progress-value { background: #65ede5; }
+progress::-moz-progress-bar { background: #65ede5; }
+#health-meter::-webkit-progress-value { background: #ffa2ba; }
+#health-meter::-moz-progress-bar { background: #ffa2ba; }
+#pause-btn { pointer-events: auto; color: #c7e1e8; background: #142530; border: 1px solid #3c5663; min-height: 44px; font-size: 11px; padding: 8px 12px; box-shadow: none; }
+#combat-status { position: absolute; bottom: 16px; left: 20px; right: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 9px; font-weight: 650; letter-spacing: .8px; color: #afe4df; pointer-events: none; }
+#dash-meter { margin-top: 6px; width: 86px; }
+#powerup-status { color: #ffe090; }
+.combat-help { color: #9ab1c2; }
+#game-container:has(#start-screen:not([style*="display: none"])) #ui,
+#game-container:has(#start-screen:not([style*="display: none"])) #combat-status { visibility: hidden; }
+#pause-screen[hidden] { display: none; }
+#pause-screen, #game-over { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow: auto; box-sizing: border-box; padding: 24px; background: #091421f2; text-align: center; border-radius: 8px; }
+#game-over { display: none; }
+#retry-btn[hidden] { display: none; }
+#final-score { margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #a9dcd7; }
+#pause-screen h2, #game-over h2 { margin: 16px 0 8px; font-size: clamp(22px,4vw,34px); color: #eef9fa; text-shadow: none; }
+#pause-screen p:not(.eyebrow) { font-size: 13px; color: #afc3d2; line-height: 1.6; }
+#pause-screen button, #game-over button { flex-shrink: 0; min-height: 44px; margin-top: 12px; background: #65ede5; padding: 12px 24px; color: #092421; box-shadow: none; }
+#pause-screen #pause-menu-btn { background: #203440; color: #c6e4ea; }
+button:focus-visible { outline: 3px solid #ffe090; outline-offset: 4px; }
+@media (max-width: 600px) {
+    #ui { padding: 10px; gap: 12px; }
+    .hud-score { min-width: 36px; }.hud-score strong { font-size: 18px; }
+    .hud-label { font-size: 8px; letter-spacing: .5px; }progress { width: 60px; }
+    #combat-status { bottom: 10px; left: 10px; right: 10px; font-size: 8px; }
+    .combat-help { display: none; }
+    #game-over-leaderboard { max-width: 100%; }
+}
