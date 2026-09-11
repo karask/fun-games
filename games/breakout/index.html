@@ -44,7 +44,7 @@
         <div class="play-footer">
             <div><span id="bricks-val">30 bricks</span><span id="rally-val"></span></div>
             <div id="boost-status" role="status"></div>
-            <div class="play-actions"><button id="launch-btn">Launch / Fire</button><button id="pause-btn">Pause</button></div>
+            <div class="play-actions"><button id="launch-btn">Launch / Fire</button><button id="pause-btn">Pause</button><button data-sound-toggle aria-pressed="true">Sound on</button></div>
         </div>
         <p id="launch-hint">Aim with the paddle. Press Space, click, or tap to launch.</p>
 
@@ -56,7 +56,7 @@
                 <p>Find the angle.<br>Start a chain reaction.</p>
             </div>
             <div class="menu-content">
-                <p class="eyebrow">EVERY BOUNCE IS A NEW CHANCE.</p>
+                <div class="menu-topline"><p class="eyebrow">EVERY BOUNCE IS A NEW CHANCE.</p><button data-sound-toggle aria-pressed="true">Sound on</button></div>
                 <h1 id="menu-title">Neon<br><span>Breakout.</span></h1>
                 <p class="menu-description">Carve a path through glowing walls.<br>Catch a boost. Make the next shot count.</p>
                 <button class="btn btn-primary start-button" onclick="window.startGame()">Start breaking <span aria-hidden="true">→</span></button>

@@ -78,3 +78,7 @@ kbd { display: inline-block; border: 1px solid #47616e; border-bottom-width: 2px
 @media (prefers-reduced-motion: reduce) { button { transition: none; } }
 
 #gameCanvas:focus-visible { outline: 1px solid #7be3d6; outline-offset: 0; }
+
+.menu-topline { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.menu-topline [data-sound-toggle] { font-size: 10px; padding: 8px 10px; background: transparent; }
+[data-sound-toggle][aria-pressed="true"] { color: #a7f3df; }

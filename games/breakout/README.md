@@ -11,6 +11,10 @@ A 20-level arcade game with mouse, touch and keyboard controls. Serve through th
 
 The dotted guide shows the serve direction. Paddle edges send sharper shots; paddle returns preserve the current ball speed. All balls must be lost before one life is deducted. Each new life resets boosts and provides an attached ball. Break every non-steel brick to advance.
 
+## Sound
+
+Sound effects are enabled by default and start only after player interaction. **Sound on / off** is available on the splash screen and during play; the setting is saved locally. Synthesized cues distinguish launching, walls, paddle returns, ordinary/armored/steel bricks, explosions, pickups, lasers, lost lives, level clears, and the end of a run. Pausing, losing focus, or returning to the menu silences active effects. Collision cues are rate-limited and capped at ten simultaneous voices.
+
 ## Bricks and boosts
 
 Colored bricks break in one hit; violet armored bricks require two and display damage. Gold blast bricks damage nearby bricks and can trigger chain reactions. Steel reflects balls and blocks lasers without taking damage. Level 17's castle has an entrance so its interior is reachable without a power-up.

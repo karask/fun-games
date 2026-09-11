@@ -1,4 +1,5 @@
 'use strict';
+import { createSound } from './audio.mjs';
 import { createClock, sweepCircleRect, paddleBounce, pointerPosition } from './physics.mjs';
 import { getHighScores, isHighScore, saveHighScore, generateLeaderboardHTML } from '../../assets/highscore.js';
 
@@ -18,6 +19,7 @@ const HIGH_SCORE_KEY = 'neon_breakout_hs';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const sound = createSound();
 const clock = createClock();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -469,6 +471,8 @@ function initLevel(levelIdx) {
 }
 
 function startGame() {
+    sound.setActive(true);
+    void sound.unlock().then(() => { if (state.phase === 'playing') sound.play('start'); });
     state.phase = 'playing';
     state.level = 1;
     state.score = 0;
@@ -485,6 +489,7 @@ function restartGame() { startGame(); }
 window.restartGame = restartGame;
 
 function showStartScreen() {
+    sound.setActive(false);
     state.phase = 'start'; keys = {}; clock.reset();
     pendingExplosions = []; toastTime = 0;
     document.getElementById('powerup-toast').classList.remove('show');
@@ -499,6 +504,7 @@ function nextLevel() {
         return;
     }
     state.level++;
+    sound.play('start');
     showOverlay(null);
     state.phase = 'playing';
     updateHUD();
@@ -508,6 +514,7 @@ function nextLevel() {
 window.nextLevel = nextLevel;
 
 function showVictory() {
+    sound.play('victory');
     state.phase = 'victory';
     document.getElementById('win-score-val').textContent = state.score;
     
@@ -545,6 +552,7 @@ function showVictory() {
 }
 
 function showGameOver() {
+    sound.play('gameover');
     state.phase = 'gameover';
     document.getElementById('go-score-val').textContent = state.score;
     document.getElementById('go-level-val').textContent = state.level;
@@ -583,6 +591,7 @@ function showGameOver() {
 }
 
 function showLevelClear() {
+    sound.play('clear');
     state.phase = 'levelclear';
     document.getElementById('clear-score-val').textContent = state.score;
     document.getElementById('level-clear-info').textContent =
@@ -593,6 +602,8 @@ function showLevelClear() {
 function togglePause() {
     if (state.phase !== 'playing' && state.phase !== 'paused') return;
     state.phase = state.phase === 'paused' ? 'playing' : 'paused';
+    sound.setActive(state.phase === 'playing');
+    if (state.phase === 'playing') void sound.unlock();
     keys = {}; clock.reset(); lastTime = performance.now();
     showOverlay(state.phase === 'paused' ? 'pause-screen' : null);
 }
@@ -629,6 +640,7 @@ function updateHUD() {
 //  POWERUP EFFECTS
 // ─────────────────────────────────────────────
 function applyPowerup(type) {
+    sound.play('pickup');
     const toast = document.getElementById('powerup-toast');
     const cfg = PALETTE.powerup[type];
 
@@ -693,6 +705,7 @@ function launchBalls() {
     for (const ball of balls) {
         if (!ball.sticky) continue;
         ball.sticky = false;
+        sound.play('launch');
         const angle = -Math.PI / 2 + launchDirection * .22;
         ball.vx = Math.cos(angle) * currentBallSpeed();
         ball.vy = Math.sin(angle) * currentBallSpeed();
@@ -700,8 +713,10 @@ function launchBalls() {
     fireLaser();
 }
 function damageBrick(brick) {
-    if (brick.type === 'unbreakable' || brick.hits <= 0) return;
+    if (brick.type === 'unbreakable') { sound.play('steel'); return; }
+    if (brick.hits <= 0) return;
     brick.hits--; brick.flash = 6;
+    sound.play(brick.hits > 0 ? 'armor' : 'brick');
     spawnParticles(brick.x + brick.w/2, brick.y + brick.h/2, getBrickColor(brick), 8, 2);
     if (brick.hits > 0) return;
     state.rally++; state.bestRally = Math.max(state.bestRally, state.rally);
@@ -713,6 +728,7 @@ function damageBrick(brick) {
 function resolveExplosions() {
     while (pendingExplosions.length) {
         const source = pendingExplosions.pop();
+        sound.play('explosion');
         spawnRingParticles(source.x+source.w/2,source.y+source.h/2,PALETTE.explosive.glow,20);
         for (const brick of bricks) {
             if (brick.hits > 0 && Math.hypot(brick.x-source.x,brick.y-source.y)<110) damageBrick(brick);
@@ -749,7 +765,9 @@ function advanceBall(ball, dt) {
         if(!hit){ball.x+=dx;ball.y+=dy;break;}
         ball.x+=dx*hit.t;ball.y+=dy*hit.t;
         remaining*=1-hit.t;
+        if(hit.kind==='wall') sound.play('wall');
         if(hit.kind==='paddle') {
+            sound.play('paddle');
             Object.assign(ball,paddleBounce((ball.x-paddle.x)/(paddle.w/2),currentBallSpeed()));
             ball.y=paddle.y-PADDLE_H/2-ball.r-.01;
             state.rally=0; paddle.flash=8;
@@ -783,6 +801,7 @@ function getBrickColor(brick) {
 // ─────────────────────────────────────────────
 function fireLaser() {
     if (activePowerups.LASER > 0 && paddle.laserCooldown <= 0) {
+        sound.play('laser');
         lasers.push({ x: paddle.x - paddle.w / 4, y: paddle.y - PADDLE_H, vy: -14, life: 1 });
         lasers.push({ x: paddle.x + paddle.w / 4, y: paddle.y - PADDLE_H, vy: -14, life: 1 });
         paddle.laserCooldown = 20;
@@ -860,6 +879,7 @@ function update(dt) {
             showGameOver();
             return;
         }
+        sound.play('lost');
         // Respawn
         for(const type of Object.keys(activePowerups))activePowerups[type]=0;
         paddle.w=lvl.paddleW; powerups=[];lasers=[];
@@ -1255,3 +1275,14 @@ for (const prefix of ['go','win']) {
         document.getElementById(prefix+'-buttons').querySelector('button').focus();
     });
 }
+
+function updateSoundButtons() {
+    document.querySelectorAll('[data-sound-toggle]').forEach(button => {
+        button.textContent = sound.enabled ? 'Sound on' : 'Sound off';
+        button.setAttribute('aria-pressed', String(sound.enabled));
+    });
+}
+document.querySelectorAll('[data-sound-toggle]').forEach(button => {
+    button.addEventListener('click', () => { void sound.toggle(); updateSoundButtons(); });
+});
+updateSoundButtons();

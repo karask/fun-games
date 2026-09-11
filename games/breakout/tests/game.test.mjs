@@ -1,17 +1,18 @@
 import test from 'node:test';
+import {createSound} from '../audio.mjs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {createClock,sweepCircleRect,paddleBounce,pointerPosition} from '../physics.mjs';
 const source=readFileSync(new URL('../game.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
-function game(){
+function game(audioEvents){
  const elements=new Map();
  const el=id=>{if(!elements.has(id))elements.set(id,{textContent:'',style:{},classList:{add(){},remove(){},toggle(){}},setAttribute(){},focus(){},querySelector(){return this},querySelectorAll(){return [this]},getClientRects(){return [{}]},addEventListener(){},getContext:()=>({setTransform(){}})});return elements.get(id)};
- const c=vm.createContext({createClock,sweepCircleRect,paddleBounce,pointerPosition,
+ const c=vm.createContext({createSound:()=>({...createSound({}),play:cue=>audioEvents?.push(cue)}),createClock,sweepCircleRect,paddleBounce,pointerPosition,
   getHighScores:()=>[],isHighScore:()=>false,saveHighScore(){},generateLeaderboardHTML:()=>'',localStorage:{getItem:()=>null},
   performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame(){},
   window:{devicePixelRatio:1,matchMedia:()=>({matches:false}),addEventListener(){}},
-  document:{getElementById:el,addEventListener(){}}});
+  document:{getElementById:el,querySelectorAll:()=>[],addEventListener(){}}});
  vm.runInContext(source,c);const run=code=>vm.runInContext(code,c);run('startGame()');return run;
 }
 test('all 20 layouts contain destructible bricks inside the arena',()=>{
@@ -86,4 +87,10 @@ test('losing the last ball costs one life and resets boosts for a clean serve',(
 test('the final brick completes a level before a simultaneous lost ball',()=>{
  const run=game();run('bricks=[];balls[0].sticky=false;balls[0].y=600;update(.5)');
  assert.equal(run('state.phase'),'levelclear');assert.equal(run('state.lives'),3);
+});
+
+test('launches, brick destruction and lost lives trigger the corresponding sounds',()=>{
+ const events=[],run=game(events);
+ run('launchBalls();damageBrick(bricks[bricks.length-1]);balls[0].y=600;balls[0].vy=6;update(.5)');
+ assert.ok(events.includes('launch'));assert.ok(events.includes('brick'));assert.ok(events.includes('lost'));
 });
